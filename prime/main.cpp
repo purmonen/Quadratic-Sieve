@@ -17,6 +17,16 @@
 
 using namespace std;
 
+template <typename T>
+void printVector(std::vector<T> vector) {
+    for (auto t: vector) {
+        std::cerr << t << " ";
+    }
+    std::cerr << std::endl;
+}
+
+
+
 mpz_class f(mpz_class x, mpz_class n) {
     return (x*x+1) % n;
 }
@@ -43,6 +53,10 @@ void writePrimesToFile(string fileName, vector<int> primes) {
     for (auto prime: primes) {
         file << prime << endl;
     }
+}
+
+bool isPerfectPower(mpz_class number) {
+    return mpz_perfect_power_p(number.get_mpz_t()) == 1;
 }
 
 vector<int> readPrimesFromFile(string fileName) {
@@ -155,21 +169,25 @@ public:
     mpz_class number;
     vector<pair<mpz_class, int>> factors;
     mpz_class quotient;
+    int B;
     
-    
-    FactorNumber(mpz_class number) {
-        this->number = number;
-        this->quotient = number;
-    }
+    FactorNumber(mpz_class number):FactorNumber(number, factors, number) {}
     
     FactorNumber(mpz_class number, vector<pair<mpz_class, int>> factors, mpz_class quotient) {
         this->number = number;
         this->factors = factors;
         this->quotient = quotient;
+        double n = number.get_d();
+
+        B = 3*exp(0.5*sqrt(log(n)*log(log(n))));
+        
+        cout << "Prime base " << endl;
+        printVector(generatePrimeBase());
         print();
     }
     
     FactorNumber pollardish(mpz_class limit) {
+        cout << "Pollardish" << endl;
         vector<pair<mpz_class, int>> factors(this->factors);
         auto quotient = this->quotient;
         for (auto startValue = 2; startValue < 6; startValue++) {
@@ -188,6 +206,7 @@ public:
     }
     
     FactorNumber trialDivision(mpz_class limit) {
+        cout << "Trial division" << endl;
         mpz_class x = quotient;
         vector<pair<mpz_class, int>> factors;
         mpz_class xroot;
@@ -208,11 +227,15 @@ public:
     
     
     FactorNumber primalDivision() {
+        cout << "Primal division" << endl;
         mpz_class x = quotient;
         vector<pair<mpz_class, int>> factors;
         mpz_class xroot;
         mpz_sqrt(xroot.get_mpz_t(), x.get_mpz_t());
         for (auto i: primes) {
+            if (i > x) {
+                break;
+            }
             int count = 0;
             while (x % i == 0) {
                 x /= i;
@@ -235,6 +258,43 @@ public:
         }
         cout << this->quotient << endl;
         cout << "Quotient: " << this->quotient << endl;
+        cout << "B: " << this->B << endl;
+
+    }
+    
+    void internalCheck() {
+        mpz_class tmp = quotient;
+        for (auto factor: factors) {
+            mpz_class pow;
+            mpz_pow_ui(pow.get_mpz_t(), factor.first.get_mpz_t(), factor.second);
+            tmp *= pow;
+        }
+        if (tmp != number) {
+            cout << "ERROR: is inconsistent";
+        }
+        
+        cout << "Internal check done.";
+    }
+    
+    
+    
+    vector<int> generatePrimeBase() {
+        vector<int> primeBase;
+        for (auto prime: primes) {
+            if (prime > B) {
+                break;
+            }
+            mpz_class tmp;
+            mpz_mod_ui(tmp.get_mpz_t(), quotient.get_mpz_t(), prime);
+            auto mod = tmp.get_si();
+            for (int i = 0; i < prime; i++) {
+                if ((i*i) % prime == mod) {
+                    primeBase.push_back(prime);
+                    break;
+                }
+            }
+        }
+        return primeBase;
     }
 };
 
@@ -243,8 +303,18 @@ int main(int argc, const char * argv[]) {
     mpz_class big;
     mpz_pow_ui(big.get_mpz_t(), ((mpz_class)10).get_mpz_t(), 60);
     n *= big;
-    n += 1;
+    n += 2;
+//    n = 15347;
     
     auto number = FactorNumber(n).primalDivision().pollardish(1e4);
+    
+    
+    
+    number.internalCheck();
+    
+    cout << "Is perfect power " << isPerfectPower(number.quotient) << endl;
+    cout << "Is prime " << isPrime(number.quotient) << endl;
+
+    
     return 0;
 }
