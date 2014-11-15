@@ -12,6 +12,7 @@
 #include <gmpxx.h>
 #include <vector>
 #include <algorithm>
+#include <fstream>
 
 using namespace std;
 
@@ -35,9 +36,33 @@ bool isPrime(mpz_class x) {
     return mpz_probab_prime_p(x.get_mpz_t(), 25) == 1;
 }
 
+void writePrimesToFile(string fileName, vector<int> primes) {
+    ofstream file;
+    file.open(fileName);
+    for (auto prime: primes) {
+        file << prime << endl;
+    }
+}
+
+vector<int> readPrimesFromFile(string fileName) {
+    vector<int> primes;
+    fstream file(fileName, ios_base::in);
+    int prime;
+    while (file >> prime) {
+        primes.push_back(prime);
+    }
+    return primes;
+}
+
 vector<int> generatePrimes(int limit) {
     cout << "Generating primes" << endl;
-    vector<int> primes;
+    string primeFileName = "primes" + to_string(limit) + ".txt";
+    
+    auto primes = readPrimesFromFile(primeFileName);
+    if (primes.size() > 0) {
+        cout << "Done generating primes" << endl;
+        return primes;
+    }
     primes.push_back(2);
     for (int i = 3; i <= limit; i+=2) {
         bool isPrime = true;
@@ -52,11 +77,11 @@ vector<int> generatePrimes(int limit) {
         }
     }
     cout << "Done generating primes" << endl;
-    
+    writePrimesToFile(primeFileName, primes);
     return primes;
 }
 
-auto primes = generatePrimes(1e5);
+auto primes = generatePrimes(1e7);
 
 mpz_class pollard(mpz_class n, int startValue, mpz_class limit) {
     mpz_class x = startValue, y = startValue, d = 1;
@@ -161,7 +186,6 @@ public:
         }
         cout << this->quotient << endl;
         cout << "Quotient: " << this->quotient << endl;
-        
     }
 };
 
@@ -172,6 +196,6 @@ int main(int argc, const char * argv[]) {
     n *= big;
     n += 1;
     
-    auto number = FactorNumber(n).primalDivision().pollardish(1e5);
+    auto number = FactorNumber(n).primalDivision().pollardish(1e8);
     return 0;
 }
