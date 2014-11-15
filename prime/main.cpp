@@ -13,6 +13,7 @@
 #include <vector>
 #include <algorithm>
 #include <fstream>
+#include <math.h>
 
 using namespace std;
 
@@ -54,34 +55,82 @@ vector<int> readPrimesFromFile(string fileName) {
     return primes;
 }
 
+static vector<int> generatePrimes2(int maxprime)
+{
+    unsigned long long* primes;
+    unsigned long long primecount=0;
+    
+    unsigned long long t = (maxprime>>6)+1ULL;
+    primes = new unsigned long long[t];
+    
+    primes[0] = 0x5555555555555556ULL;
+    for (int i = 1; i < ((maxprime>>6)+1ULL); i ++)
+    {
+        primes[i] = 0x5555555555555555ULL;
+    }
+    
+    bool f;
+    t = maxprime;
+    unsigned long long maxtest = (long long)sqrtl(t) + 1;
+    
+    unsigned long long q;
+    for ( long long i = 3; i < maxtest; i += 2)
+    {
+        f=primes[(i-1)>>6] & (1ULL<<(((i-1)&63)));
+        if (f == true)
+        {
+            q = i + i;
+            for( long long p = i * i-1; p < maxprime-1;p += q)
+            {
+                unsigned long long dc =~ (1ULL<<((p&63)));
+                primes[p>>6] = primes[p>>6] & dc;
+            }
+        }
+    }
+    vector<int> result;
+    
+    for ( long long i = 2; i < maxprime; i ++)
+    {
+        f=primes[(i-1)>>6ULL] & (1ULL<<(((i-1)&63ULL)));
+        if (f)
+        {
+            result.push_back((int)i);
+            primecount++;
+        }
+    }
+    
+    return result;
+}
+
 vector<int> generatePrimes(int limit) {
     cout << "Generating primes" << endl;
     string primeFileName = "primes" + to_string(limit) + ".txt";
     
     auto primes = readPrimesFromFile(primeFileName);
     if (primes.size() > 0) {
-        cout << "Done generating primes" << endl;
+        cout << "Done generating primes from file " << endl;
         return primes;
     }
-    primes.push_back(2);
-    for (int i = 3; i <= limit; i+=2) {
-        bool isPrime = true;
-        for (auto prime: primes) {
-            if (i % prime == 0) {
-                isPrime = false;
-                break;
-            }
-        }
-        if (isPrime) {
-            primes.push_back(i);
-        }
-    }
+    primes = generatePrimes2(limit);
+//    primes.push_back(2);
+//    for (int i = 3; i <= limit; i+=2) {
+//        bool isPrime = true;
+//        for (auto prime: primes) {
+//            if (i % prime == 0) {
+//                isPrime = false;
+//                break;
+//            }
+//        }
+//        if (isPrime) {
+//            primes.push_back(i);
+//        }
+//    }
     cout << "Done generating primes" << endl;
     writePrimesToFile(primeFileName, primes);
     return primes;
 }
 
-auto primes = generatePrimes(1e7);
+auto primes = generatePrimes(1e8);
 
 mpz_class pollard(mpz_class n, int startValue, mpz_class limit) {
     mpz_class x = startValue, y = startValue, d = 1;
@@ -196,6 +245,6 @@ int main(int argc, const char * argv[]) {
     n *= big;
     n += 1;
     
-    auto number = FactorNumber(n).primalDivision().pollardish(1e8);
+    auto number = FactorNumber(n).primalDivision().pollardish(1e4);
     return 0;
 }
