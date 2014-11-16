@@ -126,19 +126,19 @@ vector<int> generatePrimes(int limit) {
         return primes;
     }
     primes = generatePrimes2(limit);
-//    primes.push_back(2);
-//    for (int i = 3; i <= limit; i+=2) {
-//        bool isPrime = true;
-//        for (auto prime: primes) {
-//            if (i % prime == 0) {
-//                isPrime = false;
-//                break;
-//            }
-//        }
-//        if (isPrime) {
-//            primes.push_back(i);
-//        }
-//    }
+    //    primes.push_back(2);
+    //    for (int i = 3; i <= limit; i+=2) {
+    //        bool isPrime = true;
+    //        for (auto prime: primes) {
+    //            if (i % prime == 0) {
+    //                isPrime = false;
+    //                break;
+    //            }
+    //        }
+    //        if (isPrime) {
+    //            primes.push_back(i);
+    //        }
+    //    }
     cout << "Done generating primes" << endl;
     writePrimesToFile(primeFileName, primes);
     return primes;
@@ -178,11 +178,13 @@ public:
         this->factors = factors;
         this->quotient = quotient;
         double n = number.get_d();
-
+        
         B = 3*exp(0.5*sqrt(log(n)*log(log(n))));
         
         cout << "Prime base " << endl;
-        Y(100);
+        if (number == quotient) {
+            Y(100);
+        }
         print();
     }
     
@@ -248,7 +250,7 @@ public:
         factors.insert(factors.begin(), this->factors.begin(), this->factors.end());
         return FactorNumber(number, factors, x);
     }
-
+    
     
     void print() {
         cout << "Number: " << this->number << endl;
@@ -259,7 +261,7 @@ public:
         cout << this->quotient << endl;
         cout << "Quotient: " << this->quotient << endl;
         cout << "B: " << this->B << endl;
-
+        
     }
     
     void internalCheck() {
@@ -287,19 +289,27 @@ public:
         return quotientSqrt;
     }
     
+    mpz_class msqrt(mpz_class x) {
+        mpz_class xSqrt;
+        mpz_sqrt(xSqrt.get_mpz_t(), x.get_mpz_t());
+        return xSqrt+1;
+    }
+    
+    mpz_class mpow(mpz_class x, int a) {
+        mpz_class pow;
+        mpz_pow_ui(pow.get_mpz_t(), x.get_mpz_t(), a);
+        return pow;
+    }
+    
     vector<mpz_class> Y(int count) {
+        
         vector<mpz_class> y;
         for (int x = 0; x < count; x++) {
             y.push_back(Q(x));
         }
-        
-
-        
+        vector<mpz_class> oldY(y);
         auto primeBase = generatePrimeBase();
-        size_t size = primeBase.size()/2+1;
-        
         vector<mpz_class> bitsets(y.size(), 0);
-        
         for (int p = 0; p < primeBase.size(); p++) {
             auto primePair = primeBase[p];
             for (int i = primePair.second; i < y.size(); i += primePair.first) {
@@ -315,6 +325,49 @@ public:
                 }
                 cout << endl;
                 cout << "Found something good " << i << endl;
+            } else {
+                bitsets[i] = 0;
+            }
+        }
+        
+        for (int i = 0; i < bitsets.size(); i++) {
+            for (int j = 0; j < bitsets.size(); j++) {
+                for (int k = 0; k < bitsets.size(); k++) {
+                    if (bitsets[i] != 0 && bitsets[j] != 0 && bitsets[k] != 0) {
+                        auto zero = bitsets[i]^bitsets[j]^bitsets[k];
+                        if (i != j && j != k && zero == 0) {
+                            cout << "Perfect match" << endl;
+                            cout << oldY[i] << " " << oldY[j] << " " << oldY[k] << endl;
+
+                            mpz_class Y = 1;
+                            for (int index: {i,j,k}) {
+                                for (int p = 0; p < primeBase.size(); p += 2) {
+                                    auto on = (bitsets[index] >> ((p+1)/2)) & 1;
+                                    if (on == 1) {
+                                        cout << primeBase[p].first << "*";
+                                        Y *= primeBase[p].first;
+                                    }
+                                }
+                            }
+                            Y = msqrt(Y) - 1;
+                            cout << bitsets[i] << " " << bitsets[j] << " " << bitsets[k] << endl;
+                            cout << "Y^2: " << Y << endl;
+                            cout << i << " " << j << " " << k << endl;
+                            
+                            auto quotientSqrt = msqrt(quotient);
+                            
+                            cout << i << " " << j << " " << k << endl;
+                            cout << i + quotientSqrt << " " << j + quotientSqrt << " " << k + quotientSqrt << endl;
+                            
+                            mpz_class X = (i + quotientSqrt)*(j + quotientSqrt)*(k + quotientSqrt);
+                            cout << "X^2: " << X << endl;
+                            
+                            cout << "N: " << quotient << endl;
+                            cout << "X-Y: " << gcd((X-Y) % quotient + quotient, quotient) << endl;
+                            cout << "X+Y: " << gcd((X+Y), quotient) << endl;
+                        }
+                    }
+                }
             }
         }
         
@@ -355,6 +408,6 @@ int main(int argc, const char * argv[]) {
     number.internalCheck();
     cout << "Is perfect power " << isPerfectPower(number.quotient) << endl;
     cout << "Is prime " << isPrime(number.quotient) << endl;
-
+    
     return 0;
 }
