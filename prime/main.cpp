@@ -164,6 +164,25 @@ mpz_class pollard(mpz_class n, int startValue, mpz_class limit) {
 
 int a = 1;
 
+mpz_class msqrtfloor(mpz_class x) {
+    mpz_class xSqrt;
+    mpz_class rem;
+    mpz_sqrtrem(xSqrt.get_mpz_t(), rem.get_mpz_t(), x.get_mpz_t());
+    return xSqrt;
+}
+
+
+mpz_class msqrtceiling(mpz_class x) {
+    mpz_class xSqrt;
+    mpz_class rem;
+    mpz_sqrtrem(xSqrt.get_mpz_t(), rem.get_mpz_t(), x.get_mpz_t());
+    if (rem > 0) {
+        xSqrt += 1;
+    }
+    return xSqrt;
+}
+
+
 class FactorNumber {
 public:
     mpz_class number;
@@ -179,7 +198,7 @@ public:
         this->quotient = quotient;
         double n = number.get_d();
         B = 3*exp(0.5*sqrt(log(n)*log(log(n))));
-//        print();
+        //        print();
     }
     
     FactorNumber pollardish(mpz_class limit) {
@@ -269,25 +288,17 @@ public:
             cout << "ERROR: is inconsistent";
         }
         
-        cout << "Internal check done.";
+        cout << "Internal check done." << endl;
     }
     
     mpz_class Q(int x) {
-        mpz_class quotientSqrt;
-        // Todo handle truncation
-        mpz_sqrt(quotientSqrt.get_mpz_t(), quotient.get_mpz_t());
-        quotientSqrt++;
+        mpz_class quotientSqrt = msqrtceiling(quotient);
         quotientSqrt += x;
         quotientSqrt *= quotientSqrt;
         quotientSqrt -= quotient;
         return quotientSqrt;
     }
     
-    mpz_class msqrt(mpz_class x) {
-        mpz_class xSqrt;
-        mpz_sqrt(xSqrt.get_mpz_t(), x.get_mpz_t());
-        return xSqrt+1;
-    }
     
     mpz_class mpow(mpz_class x, int a) {
         mpz_class pow;
@@ -296,13 +307,14 @@ public:
     }
     
     FactorNumber quadraticSieve() {
-        int count = 100;
+
+        auto primeBase = generatePrimeBase();
+        auto count = 20 * primeBase.size();
         vector<mpz_class> y;
         for (int x = 0; x < count; x++) {
             y.push_back(Q(x));
         }
         vector<mpz_class> oldY(y);
-        auto primeBase = generatePrimeBase();
         vector<mpz_class> bitsets(y.size(), 0);
         for (int p = 0; p < primeBase.size(); p++) {
             auto primePair = primeBase[p];
@@ -343,12 +355,12 @@ public:
                                     }
                                 }
                             }
-                            Y = msqrt(Y) - 1;
+                            Y = msqrtceiling(Y);
                             cout << bitsets[i] << " " << bitsets[j] << " " << bitsets[k] << endl;
                             cout << "Y^2: " << Y << endl;
                             cout << i << " " << j << " " << k << endl;
                             
-                            auto quotientSqrt = msqrt(quotient);
+                            auto quotientSqrt = msqrtceiling(quotient);
                             
                             cout << i << " " << j << " " << k << endl;
                             cout << i + quotientSqrt << " " << j + quotientSqrt << " " << k + quotientSqrt << endl;
@@ -361,7 +373,7 @@ public:
                             cout << "X+Y: " << gcd((X+Y), quotient) << endl;
                             
                             vector<pair<mpz_class, int>> factors(this->factors);
-
+                            
                             mpz_class x = quotient;
                             auto commonFactors = gcd(X-Y,quotient);
                             if (commonFactors != 1) {
@@ -373,7 +385,7 @@ public:
                                 factors.push_back(pair<mpz_class, int>(commonFactors, 1));
                                 x /= (commonFactors);
                             }
-
+                            
                             
                             return FactorNumber(number, factors, x);
                             //                            factors
@@ -381,7 +393,68 @@ public:
                     }
                 }
             }
+            
+            for (int i = 0; i < bitsets.size(); i++) {
+                for (int j = 0; j < bitsets.size(); j++) {
+                    if (bitsets[i] != 0 && bitsets[j] != 0) {
+                        auto zero = bitsets[i]^bitsets[j];
+                        if (i != j && zero == 0) {
+                            cout << "Perfect match" << endl;
+                            cout << oldY[i] << " " << oldY[j] << " " << endl;
+                            
+                            mpz_class Y = 1;
+                            for (int index: {i,j}) {
+                                for (int p = 0; p < primeBase.size(); p += 2) {
+                                    auto on = (bitsets[index] >> ((p+1)/2)) & 1;
+                                    if (on == 1) {
+                                        cout << primeBase[p].first << "*";
+                                        Y *= primeBase[p].first;
+                                    }
+                                }
+                            }
+                            Y = msqrtceiling(Y);
+                            cout << bitsets[i] << " " << bitsets[j] << " " << endl;
+                            cout << "Y^2: " << Y << endl;
+                            cout << i << " " << j << " " << endl;
+                            
+                            auto quotientSqrt = msqrtceiling(quotient);
+                            
+                            cout << i << " " << j << " " << endl;
+                            cout << i + quotientSqrt << " " << j + quotientSqrt << " " << endl;
+                            
+                            mpz_class X = (i + quotientSqrt)*(j + quotientSqrt);
+                            cout << "X^2: " << X << endl;
+                            
+                            cout << "N: " << quotient << endl;
+                            cout << "X-Y: " << gcd((X-Y), quotient) << endl;
+                            cout << "X+Y: " << gcd((X+Y), quotient) << endl;
+                            
+                            vector<pair<mpz_class, int>> factors(this->factors);
+                            
+                            mpz_class x = quotient;
+                            auto commonFactors = gcd(X-Y,quotient);
+                            if (commonFactors != 1) {
+                                factors.push_back(pair<mpz_class, int>(commonFactors, 1));
+                                x /= (commonFactors);
+                            }
+                            commonFactors = gcd(X+Y,quotient);
+                            if (commonFactors != 1) {
+                                factors.push_back(pair<mpz_class, int>(commonFactors, 1));
+                                x /= (commonFactors);
+                            }
+                            
+                            
+                            return FactorNumber(number, factors, x);
+                            //                            factors
+                        }
+                    }
+                }
+            }
+
         }
+        
+        
+        
         return FactorNumber(number, factors, quotient);
     }
     
@@ -412,7 +485,7 @@ int main(int argc, const char * argv[]) {
     n *= big;
     n += 2;
     n = 15347;
-    
+
     
     vector<pair<mpz_class, int>> v;
     auto number = FactorNumber(n, v, n).quadraticSieve();
