@@ -178,14 +178,8 @@ public:
         this->factors = factors;
         this->quotient = quotient;
         double n = number.get_d();
-        
         B = 3*exp(0.5*sqrt(log(n)*log(log(n))));
-        
-        cout << "Prime base " << endl;
-        if (number == quotient) {
-            Y(100);
-        }
-        print();
+//        print();
     }
     
     FactorNumber pollardish(mpz_class limit) {
@@ -301,8 +295,8 @@ public:
         return pow;
     }
     
-    vector<mpz_class> Y(int count) {
-        
+    FactorNumber quadraticSieve() {
+        int count = 100;
         vector<mpz_class> y;
         for (int x = 0; x < count; x++) {
             y.push_back(Q(x));
@@ -338,7 +332,7 @@ public:
                         if (i != j && j != k && zero == 0) {
                             cout << "Perfect match" << endl;
                             cout << oldY[i] << " " << oldY[j] << " " << oldY[k] << endl;
-
+                            
                             mpz_class Y = 1;
                             for (int index: {i,j,k}) {
                                 for (int p = 0; p < primeBase.size(); p += 2) {
@@ -363,18 +357,33 @@ public:
                             cout << "X^2: " << X << endl;
                             
                             cout << "N: " << quotient << endl;
-                            cout << "X-Y: " << gcd((X-Y) % quotient + quotient, quotient) << endl;
+                            cout << "X-Y: " << gcd((X-Y), quotient) << endl;
                             cout << "X+Y: " << gcd((X+Y), quotient) << endl;
+                            
+                            vector<pair<mpz_class, int>> factors(this->factors);
+
+                            mpz_class x = quotient;
+                            auto commonFactors = gcd(X-Y,quotient);
+                            if (commonFactors != 1) {
+                                factors.push_back(pair<mpz_class, int>(commonFactors, 1));
+                                x /= (commonFactors);
+                            }
+                            commonFactors = gcd(X+Y,quotient);
+                            if (commonFactors != 1) {
+                                factors.push_back(pair<mpz_class, int>(commonFactors, 1));
+                                x /= (commonFactors);
+                            }
+
+                            
+                            return FactorNumber(number, factors, x);
+                            //                            factors
                         }
                     }
                 }
             }
         }
-        
-        return y;
+        return FactorNumber(number, factors, quotient);
     }
-    
-    
     
     vector<pair<int, int>> generatePrimeBase() {
         vector<pair<int, int>> primeBase;
@@ -404,10 +413,10 @@ int main(int argc, const char * argv[]) {
     n += 2;
     n = 15347;
     
-    auto number = FactorNumber(n).primalDivision().pollardish(1e4);
-    number.internalCheck();
-    cout << "Is perfect power " << isPerfectPower(number.quotient) << endl;
-    cout << "Is prime " << isPrime(number.quotient) << endl;
     
+    vector<pair<mpz_class, int>> v;
+    auto number = FactorNumber(n, v, n).quadraticSieve();
+    number.internalCheck();
+    number.print();
     return 0;
 }
