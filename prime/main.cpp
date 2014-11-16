@@ -182,7 +182,7 @@ public:
         B = 3*exp(0.5*sqrt(log(n)*log(log(n))));
         
         cout << "Prime base " << endl;
-        printVector(generatePrimeBase());
+        Y(100);
         print();
     }
     
@@ -276,21 +276,66 @@ public:
         cout << "Internal check done.";
     }
     
+    mpz_class Q(int x) {
+        mpz_class quotientSqrt;
+        // Todo handle truncation
+        mpz_sqrt(quotientSqrt.get_mpz_t(), quotient.get_mpz_t());
+        quotientSqrt++;
+        quotientSqrt += x;
+        quotientSqrt *= quotientSqrt;
+        quotientSqrt -= quotient;
+        return quotientSqrt;
+    }
+    
+    vector<mpz_class> Y(int count) {
+        vector<mpz_class> y;
+        for (int x = 0; x < count; x++) {
+            y.push_back(Q(x));
+        }
+        
+
+        
+        auto primeBase = generatePrimeBase();
+        size_t size = primeBase.size()/2+1;
+        
+        vector<mpz_class> bitsets(y.size(), 0);
+        
+        for (int p = 0; p < primeBase.size(); p++) {
+            auto primePair = primeBase[p];
+            for (int i = primePair.second; i < y.size(); i += primePair.first) {
+                y[i] /= primePair.first;
+                bitsets[i] ^= ((1 << (p+1)/2));
+            }
+        }
+        
+        for (int i = 0; i < y.size(); i++) {
+            if (y[i] == 1) {
+                for (int p = 0; p < primeBase.size(); p+=2) {
+                    cout << ((bitsets[i] >> ((p+1)/2)) & 1) << " ";
+                }
+                cout << endl;
+                cout << "Found something good " << i << endl;
+            }
+        }
+        
+        return y;
+    }
     
     
-    vector<int> generatePrimeBase() {
-        vector<int> primeBase;
+    
+    vector<pair<int, int>> generatePrimeBase() {
+        vector<pair<int, int>> primeBase;
         for (auto prime: primes) {
             if (prime > B) {
                 break;
             }
             mpz_class tmp;
+            
             mpz_mod_ui(tmp.get_mpz_t(), quotient.get_mpz_t(), prime);
             auto mod = tmp.get_si();
             for (int i = 0; i < prime; i++) {
                 if ((i*i) % prime == mod) {
-                    primeBase.push_back(prime);
-                    break;
+                    primeBase.push_back(pair<int, int>(prime, ((i - 124) % prime + prime) % prime));
                 }
             }
         }
@@ -304,17 +349,12 @@ int main(int argc, const char * argv[]) {
     mpz_pow_ui(big.get_mpz_t(), ((mpz_class)10).get_mpz_t(), 60);
     n *= big;
     n += 2;
-//    n = 15347;
+    n = 15347;
     
     auto number = FactorNumber(n).primalDivision().pollardish(1e4);
-    
-    
-    
     number.internalCheck();
-    
     cout << "Is perfect power " << isPerfectPower(number.quotient) << endl;
     cout << "Is prime " << isPrime(number.quotient) << endl;
 
-    
     return 0;
 }
