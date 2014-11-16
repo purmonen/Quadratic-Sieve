@@ -196,6 +196,7 @@ public:
     mpz_class number;
     vector<pair<mpz_class, int>> factors;
     mpz_class quotient;
+    mpz_class quotientSqrt;
     int B;
     
     FactorNumber(mpz_class number):FactorNumber(number, factors, number) {}
@@ -204,8 +205,9 @@ public:
         this->number = number;
         this->factors = factors;
         this->quotient = quotient;
+        this->quotientSqrt = msqrtceiling(quotient);
         double n = number.get_d();
-        B = 3*exp(0.5*sqrt(log(n)*log(log(n))));
+        B = 3*exp(0.5*sqrt(log(n)*log(log(n)))) + 300;
         //        print();
         
         if (isPrime(quotient)) {
@@ -305,15 +307,6 @@ public:
         cout << "Internal check done." << endl;
     }
     
-    mpz_class Q(int x) {
-        mpz_class quotientSqrt = msqrtceiling(quotient);
-        quotientSqrt += x;
-        quotientSqrt *= quotientSqrt;
-        quotientSqrt -= quotient;
-        return quotientSqrt;
-    }
-    
-    
     mpz_class mpow(mpz_class x, int a) {
         mpz_class pow;
         mpz_pow_ui(pow.get_mpz_t(), x.get_mpz_t(), a);
@@ -321,20 +314,19 @@ public:
     }
     
     FactorNumber quadraticSieve() {
-        
         // generating prime base
         auto primeBase = generatePrimeBase();
         
         
         cout << "Prime base size " << primeBase.size() << endl;
         
-        auto count = 10 * primeBase.size();
+        auto count = 100 * primeBase.size();
         
         // Generating Y
         vector<mpz_class> y;
         for (int x = 0; x < count; x++) {
-//            cout << "Q " << Q(x) << endl;
-            y.push_back(Q(x));
+            mpz_class q = (quotientSqrt + x)*(quotientSqrt + x) - quotient;
+            y.push_back(q);
         }
         
         // Sieving
@@ -364,8 +356,8 @@ public:
             }
         }
         
-        cout << "Bit sets" << endl;
-        printVector(bitsets);
+//        cout << "Bit sets" << endl;
+//        printVector(bitsets);
         
         // Ugly finding solution
         for (int i = 0; i < bitsets.size(); i++) {
@@ -376,6 +368,7 @@ public:
                         if (zero == 0) {
                             cout << "Perfect match" << endl;
                             cout << oldY[i] << " " << oldY[j] << " " << oldY[k] << endl;
+                            cout << bitsets[i] << " " << bitsets[j] << " " << bitsets[k] << endl;
                             mpz_class Y = 1;
                             for (int index: {i,j,k}) {
                                 Y *= oldY[index];
@@ -433,14 +426,20 @@ public:
             if (prime > B) {
                 break;
             }
-            mpz_class tmp;
-            
-            mpz_mod_ui(tmp.get_mpz_t(), quotient.get_mpz_t(), prime);
-            auto mod = tmp.get_si();
+            auto mod = quotient % prime;
+            int lastRoot = -1;
             for (int i = 0; i < prime; i++) {
                 if ((i*i) % prime == mod) {
-                    cout << prime << " " << i << endl;
-                    primeBase.push_back(pair<int, int>(prime, ((i - 124) % prime + prime) % prime));
+                    if (lastRoot != -1 || prime == 2) {
+                        primeBase.push_back(pair<int, int>(prime, ((i - quotientSqrt.get_si()) % prime + prime) % prime));
+                        if (lastRoot != -1) {
+                            primeBase.push_back(pair<int, int>(prime, ((lastRoot - quotientSqrt.get_si()) % prime + prime) % prime));
+                        }
+                        cout << prime << " " << lastRoot << endl;
+                        cout << prime << " " << i << endl;
+                        break;
+                    }
+                    lastRoot = i;
                 }
             }
         }
@@ -454,9 +453,9 @@ int main(int argc, const char * argv[]) {
     mpz_pow_ui(big.get_mpz_t(), ((mpz_class)10).get_mpz_t(), 60);
     n *= big;
     n += 2;
-//    n = 503*509;
+    n = 9011221992;
 //    n = 15347;
-    n = 15346;
+    n = 375467583;
     vector<pair<mpz_class, int>> v;
     auto number = FactorNumber(n, v, n).quadraticSieve();
     number.internalCheck();
