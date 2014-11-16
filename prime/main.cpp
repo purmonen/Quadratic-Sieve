@@ -344,7 +344,6 @@ public:
                         if (i != j && j != k && zero == 0) {
                             cout << "Perfect match" << endl;
                             cout << oldY[i] << " " << oldY[j] << " " << oldY[k] << endl;
-                            
                             mpz_class Y = 1;
                             for (int index: {i,j,k}) {
                                 for (int p = 0; p < primeBase.size(); p += 2) {
@@ -386,74 +385,15 @@ public:
                                 x /= (commonFactors);
                             }
                             
-                            
-                            return FactorNumber(number, factors, x);
+                            if (commonFactors != 1) {
+                                return FactorNumber(number, factors, x);
+                            }
                             //                            factors
                         }
                     }
                 }
             }
-            
-            for (int i = 0; i < bitsets.size(); i++) {
-                for (int j = 0; j < bitsets.size(); j++) {
-                    if (bitsets[i] != 0 && bitsets[j] != 0) {
-                        auto zero = bitsets[i]^bitsets[j];
-                        if (i != j && zero == 0) {
-                            cout << "Perfect match" << endl;
-                            cout << oldY[i] << " " << oldY[j] << " " << endl;
-                            
-                            mpz_class Y = 1;
-                            for (int index: {i,j}) {
-                                for (int p = 0; p < primeBase.size(); p += 2) {
-                                    auto on = (bitsets[index] >> ((p+1)/2)) & 1;
-                                    if (on == 1) {
-                                        cout << primeBase[p].first << "*";
-                                        Y *= primeBase[p].first;
-                                    }
-                                }
-                            }
-                            Y = msqrtceiling(Y);
-                            cout << bitsets[i] << " " << bitsets[j] << " " << endl;
-                            cout << "Y^2: " << Y << endl;
-                            cout << i << " " << j << " " << endl;
-                            
-                            auto quotientSqrt = msqrtceiling(quotient);
-                            
-                            cout << i << " " << j << " " << endl;
-                            cout << i + quotientSqrt << " " << j + quotientSqrt << " " << endl;
-                            
-                            mpz_class X = (i + quotientSqrt)*(j + quotientSqrt);
-                            cout << "X^2: " << X << endl;
-                            
-                            cout << "N: " << quotient << endl;
-                            cout << "X-Y: " << gcd((X-Y), quotient) << endl;
-                            cout << "X+Y: " << gcd((X+Y), quotient) << endl;
-                            
-                            vector<pair<mpz_class, int>> factors(this->factors);
-                            
-                            mpz_class x = quotient;
-                            auto commonFactors = gcd(X-Y,quotient);
-                            if (commonFactors != 1) {
-                                factors.push_back(pair<mpz_class, int>(commonFactors, 1));
-                                x /= (commonFactors);
-                            }
-                            commonFactors = gcd(X+Y,quotient);
-                            if (commonFactors != 1) {
-                                factors.push_back(pair<mpz_class, int>(commonFactors, 1));
-                                x /= (commonFactors);
-                            }
-                            
-                            
-                            return FactorNumber(number, factors, x);
-                            //                            factors
-                        }
-                    }
-                }
-            }
-
         }
-        
-        
         
         return FactorNumber(number, factors, quotient);
     }
