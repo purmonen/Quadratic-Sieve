@@ -315,12 +315,33 @@ public:
     
     FactorNumber quadraticSieve() {
         // generating prime base
-        auto primeBase = generatePrimeBase();
         
+        auto primeBase = generatePrimeBase();
+        auto primeBase2 = generatePrimeBase2();
+        cout << "Prime base size " << endl;
+        cout << primeBase.size() << " " << primeBase2.size() << endl;
+        
+        cout << "Prime base 2 " << endl;
+        for (auto p: primeBase2) {
+            cout << p.first << " " << p.second << endl;
+        }
+        
+        cout << "Prime base 1 " << endl;
+        for (auto p: primeBase) {
+            for (auto r: p.second) {
+                cout << p.first << " " << r << endl;
+            }
+        }
+        
+        for (auto p = 0; p < primeBase.size(); p++) {
+            auto primePair = primeBase[p];
+            cout << "Prime number: " << primePair.first << endl;
+            printVector(primePair.second);
+        }
         
         cout << "Prime base size " << primeBase.size() << endl;
         
-        auto count = 100 * primeBase.size();
+        auto count = 20 * primeBase.size();
         
         // Generating Y
         vector<mpz_class> y;
@@ -332,22 +353,43 @@ public:
         // Sieving
         vector<mpz_class> oldY(y);
         vector<mpz_class> bitsets(y.size(), 0);
-
-        for (int p = 0; p < primeBase.size(); p++) {
+        vector<vector<int>> bitsetsCount(y.size(), vector<int>(primeBase.size(), 0));
+        
+        for (long long p = 0; p < primeBase.size(); p++) {
             auto primePair = primeBase[p];
-            for (int i = primePair.second; i < y.size(); i += primePair.first) {
-                while (y[i] % primePair.first == 0) {
-                    y[i] /= primePair.first;
-                    bitsets[i] ^= ((1 << (p+1)/2));
+            for (int root: primePair.second) {
+                for (int i = root; i < y.size(); i += primePair.first) {
+//                    cout << y[i] << " " << primePair.first << " " << y[i] % primePair.first << endl;
+                    while (y[i] % primePair.first == 0) {
+                        y[i] /= primePair.first;
+                        
+                        cout << bitsets[i] << "_";
+                        bitsets[i] ^= (((mpz_class)1) << p);
+                        
+                        cout << bitsets[i] << "_" << p << endl;
+                        bitsetsCount[i][p]++;
+                        
+                        if (bitsetsCount[i][p] % 2 != ((bitsets[i] >> p) & 1)) {
+                            cout << bitsetsCount[i][p] << "-" << ((bitsets[i] >> p) & 1);
+                                                                              cout << endl;
+                            cout << "ULTRA ERROR BITWISE STUFF DOES NOT WORK" << endl;
+                        }
+                    }
                 }
             }
         }
         
+        cout << "Bitsets" << endl;
+        printVector(bitsets);
+        
+        cout << "Y" << endl;
+        printVector(y);
+        
         // Finding Y's that factored in our base
         for (int i = 0; i < y.size(); i++) {
             if (y[i] == 1) {
-                for (int p = 0; p < primeBase.size(); p+=2) {
-                    cout << ((bitsets[i] >> ((p+1)/2)) & 1) << " ";
+                for (int p = 0; p < primeBase.size(); p++) {
+                    cout << ((bitsets[i] >> p) & 1) << " ";
                 }
                 cout << endl;
                 cout << "Found something good " << i << endl;
@@ -356,8 +398,7 @@ public:
             }
         }
         
-//        cout << "Bit sets" << endl;
-//        printVector(bitsets);
+        //        printVector(bitsets);
         
         // Ugly finding solution
         for (int i = 0; i < bitsets.size(); i++) {
@@ -369,10 +410,22 @@ public:
                             cout << "Perfect match" << endl;
                             cout << oldY[i] << " " << oldY[j] << " " << oldY[k] << endl;
                             cout << bitsets[i] << " " << bitsets[j] << " " << bitsets[k] << endl;
+                            printVector(bitsetsCount[i]);
+                            printVector(bitsetsCount[j]);
+                            printVector(bitsetsCount[k]);
+//                            cout << bitsetsCount[i][ << " " << bitsetsCount[j] << " " << bitsetsCount[k] << endl;
+                            
+                            for (auto p: primeBase) {
+                                cout << p.first << " ";
+                            }
+                            cout << endl;
+//                            cout << primeBase[i].first << " " << primeBase[j].first << " " << primeBase[k].first << endl;
                             mpz_class Y = 1;
+                            
                             for (int index: {i,j,k}) {
                                 Y *= oldY[index];
                             }
+                            cout << "Yfsdaf: " << Y << endl;
                             if (msqrtceiling(Y) != msqrtfloor(Y)) {
                                 cout << "ERROR ultra bug in roots";
                             }
@@ -381,7 +434,6 @@ public:
                             cout << bitsets[i] << " " << bitsets[j] << " " << bitsets[k] << endl;
                             cout << "Y^2: " << Y << endl;
                             cout << i << " " << j << " " << k << endl;
-                            auto quotientSqrt = msqrtceiling(quotient);
                             cout << i << " " << j << " " << k << endl;
                             cout << i + quotientSqrt << " " << j + quotientSqrt << " " << k + quotientSqrt << endl;
                             mpz_class X = (i + quotientSqrt)*(j + quotientSqrt)*(k + quotientSqrt);
@@ -403,7 +455,7 @@ public:
                                 factors.push_back(pair<mpz_class, int>(commonFactors, 1));
                                 x /= (commonFactors);
                             }
-                            commonFactors = gcd(X+Y,quotient);
+                            commonFactors = gcd(X+Y,x);
                             if (commonFactors != 1  && commonFactors != quotient) {                                factors.push_back(pair<mpz_class, int>(commonFactors, 1));
                                 x /= (commonFactors);
                             }
@@ -420,7 +472,8 @@ public:
         return FactorNumber(number, factors, quotient);
     }
     
-    vector<pair<int, int>> generatePrimeBase() {
+    
+    vector<pair<int, int>> generatePrimeBase2() {
         vector<pair<int, int>> primeBase;
         for (auto prime: primes) {
             if (prime > B) {
@@ -435,13 +488,41 @@ public:
                         if (lastRoot != -1) {
                             primeBase.push_back(pair<int, int>(prime, ((lastRoot - quotientSqrt.get_si()) % prime + prime) % prime));
                         }
-                        cout << prime << " " << lastRoot << endl;
-                        cout << prime << " " << i << endl;
+
                         break;
                     }
                     lastRoot = i;
                 }
             }
+        }
+        return primeBase;
+    }
+
+    
+    vector<pair<int, vector<int>>> generatePrimeBase() {
+        vector<pair<int, vector<int>>> primeBase;
+
+        for (auto prime: primes) {
+            if (prime > B) {
+                break;
+            }
+            auto mod = quotient % prime;
+            for (int i = 0; i < prime; i++) {
+                if ((i*i) % prime == mod) {
+                    if (primeBase.empty() || primeBase.back().first != prime) {
+                        pair<int, vector<int>> primeRoots(prime, vector<int>());
+                        primeBase.push_back(primeRoots);
+                    }
+                    int tmp = (((i - quotientSqrt.get_si()) % prime + prime) % prime);
+                    primeBase.back().second.push_back(tmp);
+                }
+            }
+//            for (int i = 0; i < prime; i++) {
+//                if (primeBase[i].second.size() == 1 && primeBase[i].first != 2) {
+//                    primeBase[i].second.clear();
+//                }
+//            }
+   
         }
         return primeBase;
     }
@@ -453,9 +534,7 @@ int main(int argc, const char * argv[]) {
     mpz_pow_ui(big.get_mpz_t(), ((mpz_class)10).get_mpz_t(), 60);
     n *= big;
     n += 2;
-    n = 9011221992;
-//    n = 15347;
-    n = 375467583;
+    n = 15348;
     vector<pair<mpz_class, int>> v;
     auto number = FactorNumber(n, v, n).quadraticSieve();
     number.internalCheck();
