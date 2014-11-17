@@ -14,7 +14,7 @@
 #include <algorithm>
 #include <fstream>
 #include <math.h>
-
+#include <assert.h>
 using namespace std;
 
 void setBit(mpz_class &x, long i) {
@@ -66,9 +66,59 @@ mpz_class gcd(mpz_class x, mpz_class y) {
     return x;
 }
 
-bool isPrime(mpz_class x) {
-    return mpz_probab_prime_p(x.get_mpz_t(), 25) == 1;
+mpz_class powMod(mpz_class base, mpz_class exponent, mpz_class mod){
+    mpz_class result;
+    mpz_powm(result.get_mpz_t(),base.get_mpz_t(),exponent.get_mpz_t(),mod.get_mpz_t());
+    return result;
 }
+
+static gmp_randclass gmpRandom(gmp_randinit_default);
+bool millerRabin(mpz_class n, int tries){
+    if (n == 2) return true;;
+    if (n == 3) return true;
+    if (n%2 == 0) return false;
+    
+    mpz_class s = 0;
+    mpz_class d = n-1;
+    while ( d%2 == 0){
+        d /= 2;
+        s++;
+    }
+    
+    for (int i=0;i<tries;i++){
+        mpz_class a = gmpRandom.get_z_range(n-4)+2;
+        mpz_class x;
+        mpz_powm(x.get_mpz_t(),a.get_mpz_t(),d.get_mpz_t(),n.get_mpz_t());
+        
+        if (x == 1 || x == n-1) continue;
+        bool ok = false;
+        for (int j = 1; j<s; j++){
+            x = (x * x) % n;
+            if (x == 1) return false;
+            if (x == (n-1)) {
+                ok = true;
+                break;
+            }
+            if (!ok) return false;
+        }
+    }
+    
+    
+    return true;
+}
+
+bool isPrime(mpz_class x) {
+    bool a = mpz_probab_prime_p(x.get_mpz_t(), 25) == 1;
+    //bool b = millerRabin(x, 25);
+    //if (a!=b){
+    //    cout<<x<<endl;
+    //}
+    //assert(a==b);
+    return a;
+    
+}
+
+
 
 void writePrimesToFile(string fileName, vector<long> primes) {
     ofstream file;
@@ -80,6 +130,12 @@ void writePrimesToFile(string fileName, vector<long> primes) {
 
 bool isPerfectPower(mpz_class number) {
     return mpz_perfect_power_p(number.get_mpz_t()) == 1;
+}
+
+mpz_class legendreSymbol(mpz_class n,mpz_class p){
+    mpz_class tmp = (p-1)/2;
+    mpz_powm(tmp.get_mpz_t(), n.get_mpz_t(), tmp.get_mpz_t(), p.get_mpz_t());
+    return tmp > 1 ? -1 : tmp;
 }
 
 vector<long> readPrimesFromFile(string fileName) {
@@ -340,15 +396,22 @@ public:
         // generating prime base
         
         auto primeBase = generatePrimeBase();
+        auto primeBase2 = generatePrimeBase2();
+        
+        cout<<"Sizes are "<<primeBase.size()<<" "<<primeBase2.size()<<endl;
         
         for (auto p = 0; p < primeBase.size(); p++) {
             auto primePair = primeBase[p];
             cout << "Prime number: " << primePair.first << endl;
             printVector(primePair.second);
         }
-        
-        cout << "Prime base size " << primeBase.size() << endl;
-        
+        cout<<endl;
+        for (auto p = 0; p < primeBase2.size(); p++) {
+            auto primePair = primeBase2[p];
+            cout << "Prime number: " << primePair.first << endl;
+            printVector(primePair.second);
+        }
+        cout<<endl<<endl;
         auto count = 10 * primeBase.size();
         
         // Generating Y
@@ -540,6 +603,64 @@ public:
         }
         return primeBase;
     }
+    
+    vector<pair<long, vector<long>>> generatePrimeBase2() {
+        vector<pair<long, vector<long>>> primeBase;
+        
+        for (auto prime: primes) {
+            if (prime > B) {
+                break;
+            }
+            if (prime<3) continue;
+            if (legendreSymbol(quotient, prime) != 1) continue;
+
+            
+            mpz_class s = 0;
+            mpz_class q = prime-1;
+            
+            while ( q%2 == 0){
+                q /= 2;
+                s++;
+            }
+            
+            //Fast method but only works if s=1
+            if (s==1){
+                mpz_class a = powMod(quotient, (prime+1)/4, prime);
+                mpz_class b = (-a+prime) % prime;
+                primeBase.push_back(pair<int, vector<long>>(prime,vector<long>{a.get_si(),b.get_si()}));
+                continue;
+            }
+            
+            //Hitta z
+            mpz_class z = 1;
+            while (legendreSymbol(z, prime) != -1)
+                z++;
+            
+            mpz_class c = powMod(z, q, prime);
+            mpz_class r = powMod(quotient, (q+1)/2, prime);
+            mpz_class t = powMod(quotient, q, prime);
+            mpz_class m = s;
+            
+            while (t != 1 && t != -prime+1){
+                auto t2 =powMod(t, 2, prime);
+                int i = 1;
+                while (powMod(t2, i, prime) != 1)
+                    i++;
+                
+                auto b = powMod(c, powMod(2, m-i-1, prime), prime);
+                
+                r = (r * b) % prime;
+                t = (t * b * b) % prime;
+                c = (b * b) % prime;
+                m = i;
+            }
+            //Solution is now p+r and p-r
+            
+            primeBase.push_back(pair<int, vector<long>>(prime,vector<long>{((mpz_class)(prime+r)).get_si(),((mpz_class)(prime-r)).get_si()}));
+            
+        }
+        return primeBase;
+    }
 };
 
 int main(int argc, const char * argv[]) {
@@ -549,6 +670,7 @@ int main(int argc, const char * argv[]) {
     n *= big;
     n += 1;
     n = 12;
+    n = 153478;
 //    n = 9011221992;
     vector<pair<mpz_class, long>> v;
     auto number = FactorNumber(n, v, n).quadraticSieve();
