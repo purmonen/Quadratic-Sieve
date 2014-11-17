@@ -77,30 +77,27 @@ bool millerRabin(mpz_class n, int tries){
     if (n == 2) return true;;
     if (n == 3) return true;
     if (n%2 == 0) return false;
-    
     mpz_class s = 0;
     mpz_class d = n-1;
     while ( d%2 == 0){
         d /= 2;
         s++;
     }
-    
-    for (int i=0;i<tries;i++){
-        mpz_class a = gmpRandom.get_z_range(n-4)+2;
-        mpz_class x;
-        mpz_powm(x.get_mpz_t(),a.get_mpz_t(),d.get_mpz_t(),n.get_mpz_t());
-        
+    for (int i=0; i<tries; i++){
+        mpz_class a = 10913;//gmpRandom.get_z_range(n-2)+2;
+        mpz_class x = powMod(a, d, n);
         if (x == 1 || x == n-1) continue;
         bool ok = false;
         for (int j = 1; j<s; j++){
             x = (x * x) % n;
+            cout<<x<<" "<<endl;
             if (x == 1) return false;
             if (x == (n-1)) {
                 ok = true;
                 break;
             }
-            if (!ok) return false;
         }
+        if (!ok) return false;
     }
     
     
@@ -109,11 +106,8 @@ bool millerRabin(mpz_class n, int tries){
 
 bool isPrime(mpz_class x) {
     bool a = mpz_probab_prime_p(x.get_mpz_t(), 25) == 1;
-    //bool b = millerRabin(x, 25);
-    //if (a!=b){
-    //    cout<<x<<endl;
-    //}
-    //assert(a==b);
+    bool b = millerRabin(x, 25);
+    assert(a==b);
     return a;
     
 }
@@ -670,7 +664,7 @@ int main(int argc, const char * argv[]) {
     n *= big;
     n += 1;
     n = 12;
-    n = 153478;
+    n = 15347;
 //    n = 9011221992;
     vector<pair<mpz_class, long>> v;
     auto number = FactorNumber(n, v, n).quadraticSieve();
