@@ -162,7 +162,7 @@ void writePrimesToFile(string fileName, vector<long> primes) {
     ofstream file;
     file.open(fileName);
     for (auto prime: primes) {
-        file << prime << endl;
+        file << prime << "\n";
     }
 }
 
@@ -257,17 +257,25 @@ vector<long> generatePrimes(long limit) {
     //        }
     //    }
     cout << "Done generating primes" << endl;
-    writePrimesToFile(primeFileName, primes);
+//    writePrimesToFile(primeFileName, primes);
     return primes;
 }
 
-auto primes = generatePrimes(1e8);
+auto primes = generatePrimes(1e10);
 
 mpz_class pollard(mpz_class n, long startValue, mpz_class limit) {
     mpz_class x = startValue, y = startValue, d = 1;
+    auto startTime = chrono::system_clock::now();
+
+    int iterations = 0;
     while (d == 1) {
-        if (limit-- < 0) {
-            cout << "Hit pollard limit " << startValue << endl;
+        iterations++;
+        if (iterations > 10000) {
+            iterations = 0;
+            if (((chrono::system_clock::now() - startTime).count() / 1e6) > limit) {
+                cout << "Hit pollard limit " << startValue << endl;
+                break;
+            }
             return NULL;
         }
         x = f(x, n);
@@ -357,12 +365,13 @@ public:
         cout << "Pollardish" << endl;
         vector<pair<mpz_class, long>> factors(this->factors);
         auto quotient = this->quotient;
-        for (auto startValue = 2; startValue < 5; startValue++) {
+        
+        for (auto startValue = 2; startValue <= 3; startValue++) {
             if (isPrime(quotient)) {
                 cout << "IS PRIME" << endl;
                 break;
             }
-            auto factor = pollard(quotient, startValue, limit);
+            auto factor = pollard(quotient, startValue, 10);
             if (factor != NULL) {
                 cout << "Pollard found " << factor << endl;
                 factors.push_back(std::pair<mpz_class, long>(factor, 1));
@@ -456,31 +465,41 @@ public:
 
         // generating prime base
         
-//        auto primeBase = generatePrimeBase();
+
+        
+        
+
         
         auto logger = Logger();
         logger.log("Generating prime base");
-        auto primeBase = generatePrimeBase2();
+        auto primeBase = generatePrimeBase(primes);
+        auto primeBase2 = generatePrimeBase2();
         
-//        cout<<"Sizes are "<<primeBase.size()<<" "<<primeBase2.size()<<endl;
-//        
-//        for (auto p = 0; p < primeBase.size(); p++) {
-//            auto primePair = primeBase[p];
-//            cout << "Prime number: " << primePair.first << endl;
-//            printVector(primePair.second);
-//        }
-//        cout<<endl;
-//        for (auto p = 0; p < primeBase2.size(); p++) {
-//            auto primePair = primeBase2[p];
-//            cout << "Prime number: " << primePair.first << endl;
-//            printVector(primePair.second);
-//        }
+        cout<<"Sizes are "<<primeBase.size()<<" "<<primeBase2.size()<<endl;
+        
+        for (auto p = 0; p < primeBase.size(); p++) {
+            auto primePair = primeBase[p];
+            cout << "Prime number: " << primePair.first << endl;
+            printVector(primePair.second);
+        }
+        cout<<endl;
+        for (auto p = 0; p < primeBase2.size(); p++) {
+            auto primePair = primeBase2[p];
+            cout << "Prime number: " << primePair.first << endl;
+            printVector(primePair.second);
+        }
         cout<<endl<<endl;
-        auto count = 10 * primeBase.size();
+        auto count = primeBase.size() * 10;
         
         
         logger.log("Generating Y");
         // Generating Y
+        
+        auto rows2 = primeBase.size();
+        auto columns2 = count;
+        
+        logger.log("Transposing matrix " + to_string(rows2) + "x" + to_string(columns2));
+        
         vector<mpz_class> y;
         for (long x = 0; x < count; x++) {
             mpz_class q = (quotientSqrt + x)*(quotientSqrt + x) - quotient;
@@ -560,8 +579,9 @@ public:
         
         logger.log("Calculating solution");
         vector<mpz_class> solutionMatrix(matrix);
-        mpz_class solution = 0;//rand() % columns;
-        solution = ~solution;
+        gmpRandom.get_z_bits(columns);
+        mpz_class solution = gmpRandom.get_z_bits(columns);
+//        solution = ~solution;
         long row = lastNonZeroRow;
         while (row >= 0) {
             if (countOnes(solution & matrix[row]) % 2 == 1) {
@@ -629,80 +649,11 @@ public:
         } else {
             logger.log("No solution found");
         }
-        
-        //        for (long i = 0; i < bitsets.size(); i++) {
-        //            for (long j = i+1; j < bitsets.size(); j++) {
-        //                for (long k = j+1; k < bitsets.size(); k++) {
-        //                    if (bitsets[i] != 0 && bitsets[j] != 0 && bitsets[k] != 0) {
-        //                        auto zero = bitsets[i]^bitsets[j]^bitsets[k];
-        //                        if (zero == 0) {
-        //                            cout << "Perfect match" << endl;
-        //                            cout << oldY[i] << " " << oldY[j] << " " << oldY[k] << endl;
-        //                            //                            cout << bitsets[i] << " " << bitsets[j] << " " << bitsets[k] << endl;
-        //                            //                            printVector(bitsetsCount[i]);
-        //                            //                            printVector(bitsetsCount[j]);
-        //                            //                            printVector(bitsetsCount[k]);
-        //                            //                            cout << bitsetsCount[i][ << " " << bitsetsCount[j] << " " << bitsetsCount[k] << endl;
-        //
-        //                            for (auto p: primeBase) {
-        //                                cout << p.first << " ";
-        //                            }
-        //                            cout << endl;
-        //                            //                            cout << primeBase[i].first << " " << primeBase[j].first << " " << primeBase[k].first << endl;
-        //                            mpz_class Y = 1;
-        //
-        //                            for (long index: {i,j,k}) {
-        //                                Y *= oldY[index];
-        //                            }
-        //                            if (msqrtceiling(Y) != msqrtfloor(Y)) {
-        //                                cout << "ERROR ultra bug in roots";
-        //                            }
-        //                            Y = msqrtceiling(Y);
-        //
-        //                            cout << bitsets[i] << " " << bitsets[j] << " " << bitsets[k] << endl;
-        //                            cout << "Y^2: " << Y << endl;
-        //                            cout << i << " " << j << " " << k << endl;
-        //                            cout << i << " " << j << " " << k << endl;
-        //                            cout << i + quotientSqrt << " " << j + quotientSqrt << " " << k + quotientSqrt << endl;
-        //                            mpz_class X = (i + quotientSqrt)*(j + quotientSqrt)*(k + quotientSqrt);
-        //                            cout << "X^2: " << X << endl;
-        //                            cout << "N: " << quotient << endl;
-        //                            cout << "X-Y: " << gcd((X-Y), quotient) << endl;
-        //                            cout << "X+Y: " << gcd((X+Y), quotient) << endl;
-        //
-        //                            vector<pair<mpz_class, long>> factors(this->factors);
-        //
-        //                            mpz_class x = quotient;
-        //
-        //                            if (X % quotient == Y || X % quotient == -Y) {
-        //                                continue;
-        //                            }
-        //
-        //                            auto commonFactors = gcd(X-Y,quotient);
-        //                            if (commonFactors != 1  && commonFactors != quotient) {
-        //                                factors.push_back(pair<mpz_class, long>(commonFactors, 1));
-        //                                x /= (commonFactors);
-        //                            }
-        //                            commonFactors = gcd(X+Y,x);
-        //                            if (commonFactors != 1  && commonFactors != quotient) {                                factors.push_back(pair<mpz_class, long>(commonFactors, 1));
-        //                                x /= (commonFactors);
-        //                            }
-        //
-        //                            if (factors.size() > this->factors.size()) {
-        //                                return FactorNumber(number, factors, x);
-        //                            }
-        //                            //                            factors
-        //                        }
-        //                    }
-        //                }
-        //            }
-        //        }
         return FactorNumber(number, factors, quotient);
     }
     
-    vector<pair<long, vector<long>>> generatePrimeBase() {
+    vector<pair<long, vector<long>>> generatePrimeBase(vector<long> primes) {
         vector<pair<long, vector<long>>> primeBase;
-        
         for (auto prime: primes) {
             if (prime > B) {
                 break;
@@ -731,11 +682,14 @@ public:
             if (prime > B) {
                 break;
             }
-            if (prime<3) continue;
-            if (legendreSymbol(quotient, prime) == 0) {
-                primeBase.push_back(pair<int, vector<long>>(prime,vector<long>{0}));
+            cout << "legender " << prime << " " << legendreSymbol(quotient, prime) << endl;
+            if (prime == 2 || legendreSymbol(quotient, prime) == 0) {
+                vector<long> vec2{prime};
+                auto base = generatePrimeBase(vec2);
+                primeBase.push_back(base.back());
                 continue;
             }
+            if (prime<3) continue;
             if (legendreSymbol(quotient, prime) != 1) continue;
 
             
@@ -789,24 +743,30 @@ public:
     }
 };
 
-void factorize(mpz_class n) {
+bool factorize(mpz_class n) {
     vector<pair<mpz_class, long>> v;
-    
-    
     auto number = FactorNumber(n, v, n);
-    number = number.primalDivision().quadraticSieve();
-    
-    
+    number = number.primalDivision();
     number.internalCheck();
     number.print();
+    return number.quotient == 1;
 }
 
 int main(int argc, const char * argv[]) {
+
     mpz_class n("9011221992");
     mpz_class big;
-    mpz_pow_ui(big.get_mpz_t(), ((mpz_class)10).get_mpz_t(), 40);
+    mpz_pow_ui(big.get_mpz_t(), ((mpz_class)10).get_mpz_t(), 60);
     n *= big;
-    n += 2;
-    factorize(n);
+    n += 0;
+//    n = 15348;
+    int count = 0;
+
+    for (int i = 1; i < 100; i++) {
+        if (factorize(n+i)) {
+            count++;
+        }
+    }
+    cout << "Factored " << count << endl;
     return 0;
 }
