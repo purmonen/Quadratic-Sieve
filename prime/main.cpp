@@ -74,6 +74,7 @@ mpz_class powMod(mpz_class base, mpz_class exponent, mpz_class mod){
 
 static gmp_randclass gmpRandom(gmp_randinit_default);
 bool millerRabin(mpz_class n, int tries){
+    if (n <= 1) return false;
     if (n == 2) return true;
     if (n == 3) return true;
     if (n%2 == 0) return false;
@@ -669,7 +670,7 @@ int main(int argc, const char * argv[]) {
     n *= big;
     n += 1;
     n = 12;
-    n = 15348;
+//    n = 15348;
 //    n = 9011221992;
     vector<pair<mpz_class, long>> v;
     auto number = FactorNumber(n, v, n).quadraticSieve();
