@@ -17,10 +17,33 @@
 
 using namespace std;
 
+void setBit(mpz_class &x, long i) {
+    x |= (((mpz_class)1) << i);
+}
+
+void unsetBit(mpz_class &x, long i) {
+    x &=~ (((mpz_class)1) << i);
+}
+
+bool isBitSet(mpz_class x, long i) {
+    return ((x >> i) & 1) == 1 ? true : false;
+}
+
+
 template <typename T>
 void printVector(std::vector<T> vector) {
     for (auto t: vector) {
         std::cerr << t << " ";
+    }
+    std::cerr << std::endl;
+}
+
+void printBitVector(std::vector<mpz_class> vector, size_t length) {
+    for (auto v: vector) {
+        for (int i = 0; i < length; i++) {
+            cout << isBitSet(v, i);
+        }
+        cout << endl;
     }
     std::cerr << std::endl;
 }
@@ -207,7 +230,7 @@ public:
         this->quotient = quotient;
         this->quotientSqrt = msqrtceiling(quotient);
         double n = number.get_d();
-        B = 3*exp(0.5*sqrt(log(n)*log(log(n)))) + 300;
+        B = 3*exp(0.5*sqrt(log(n)*log(log(n)))) + 10;
         //        print();
         
         if (isPrime(quotient)) {
@@ -326,7 +349,7 @@ public:
         
         cout << "Prime base size " << primeBase.size() << endl;
         
-        auto count = 50 * primeBase.size();
+        auto count = 10 * primeBase.size();
         
         // Generating Y
         vector<mpz_class> y;
@@ -347,18 +370,11 @@ public:
 //                    cout << y[i] << " " << primePair.first << " " << y[i] % primePair.first << endl;
                     while (y[i] % primePair.first == 0) {
                         y[i] /= primePair.first;
-                        
-                        cout << bitsets[i] << "_";
                         bitsets[i] ^= (((mpz_class)1) << p);
-                        
-                        cout << bitsets[i] << "_" << p << endl;
                         bitsetsCount[i][p]++;
-                        
-                        if (bitsetsCount[i][p] % 2 != ((bitsets[i] >> p) & 1)) {
-                            cout << bitsetsCount[i][p] << "-" << ((bitsets[i] >> p) & 1);
-                                                                              cout << endl;
-                            cout << "ULTRA ERROR BITWISE STUFF DOES NOT WORK" << endl;
-                        }
+//                        if (bitsetsCount[i][p] % 2 != ((bitsets[i] >> p) & 1)) {
+//                            cout << "ULTRA ERROR BITWISE STUFF DOES NOT WORK" << endl;
+//                        }
                     }
                 }
             }
@@ -383,9 +399,56 @@ public:
             }
         }
         
-        //        printVector(bitsets);
+
         
+        auto rows = primeBase.size();
+        auto columns = y.size();
+        vector<mpz_class> matrix(rows, mpz_class(0));
+        for (int row = 0; row < rows; row++) {
+            for (int column = 0; column < columns; column++) {
+                if (isBitSet(bitsets[column], row)) {
+                    setBit(matrix[row], column);
+                }
+            }
+        }
+        cout << "Bitsets" << endl;
+//        printBitVector(bitsets, rows);
+        cout << "Transposed?" << endl;
+        printBitVector(matrix, columns);
         // Ugly finding solution
+        
+        // Echelon matrix
+        int i = 0;
+        int j = 0;
+        while (i < rows && j < columns) {
+            for (int row = i+1; row < rows; row++) {
+                if (isBitSet(matrix[row], j)) {
+                    swap(matrix[i], matrix[row]);
+                    break;
+                }
+            }
+            if (isBitSet(matrix[i], j)) {
+                for (int row = i + 1; row < rows; row++) {
+                    if (isBitSet(matrix[row], j)) {
+                        matrix[row] ^= matrix[i];
+                    }
+                }
+                i++;
+            }
+            j++;
+        }
+        
+        
+        cout << "Echelon?" << endl;
+        printBitVector(matrix, columns);
+        
+//        int a = 0;
+//        int b = 0;
+//        while(a % quotient == b % quotient || a % quotient == (- b) % quotient + quotient) {
+//            
+//        }
+        
+        
         for (long i = 0; i < bitsets.size(); i++) {
             for (long j = i+1; j < bitsets.size(); j++) {
                 for (long k = j+1; k < bitsets.size(); k++) {
@@ -395,9 +458,9 @@ public:
                             cout << "Perfect match" << endl;
                             cout << oldY[i] << " " << oldY[j] << " " << oldY[k] << endl;
                             cout << bitsets[i] << " " << bitsets[j] << " " << bitsets[k] << endl;
-                            printVector(bitsetsCount[i]);
-                            printVector(bitsetsCount[j]);
-                            printVector(bitsetsCount[k]);
+//                            printVector(bitsetsCount[i]);
+//                            printVector(bitsetsCount[j]);
+//                            printVector(bitsetsCount[k]);
 //                            cout << bitsetsCount[i][ << " " << bitsetsCount[j] << " " << bitsetsCount[k] << endl;
                             
                             for (auto p: primeBase) {
@@ -410,7 +473,6 @@ public:
                             for (long index: {i,j,k}) {
                                 Y *= oldY[index];
                             }
-                            cout << "Yfsdaf: " << Y << endl;
                             if (msqrtceiling(Y) != msqrtfloor(Y)) {
                                 cout << "ERROR ultra bug in roots";
                             }
@@ -486,9 +548,10 @@ int main(int argc, const char * argv[]) {
     mpz_pow_ui(big.get_mpz_t(), ((mpz_class)10).get_mpz_t(), 20);
     n *= big;
     n += 1;
+    n = 12;
 //    n = 9011221992;
     vector<pair<mpz_class, long>> v;
-    auto number = FactorNumber(n, v, n).primalDivision().quadraticSieve();
+    auto number = FactorNumber(n, v, n).quadraticSieve();
     number.internalCheck();
     number.print();
     return 0;
