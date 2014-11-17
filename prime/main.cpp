@@ -74,7 +74,7 @@ mpz_class powMod(mpz_class base, mpz_class exponent, mpz_class mod){
 
 static gmp_randclass gmpRandom(gmp_randinit_default);
 bool millerRabin(mpz_class n, int tries){
-    if (n == 2) return true;;
+    if (n == 2) return true;
     if (n == 3) return true;
     if (n%2 == 0) return false;
     mpz_class s = 0;
@@ -84,7 +84,7 @@ bool millerRabin(mpz_class n, int tries){
         s++;
     }
     for (int i=0; i<tries; i++){
-        mpz_class a = 10913;//gmpRandom.get_z_range(n-2)+2;
+        mpz_class a = gmpRandom.get_z_range(n-2)+2;
         mpz_class x = powMod(a, d, n);
         if (x == 1 || x == n-1) continue;
         bool ok = false;
@@ -105,8 +105,11 @@ bool millerRabin(mpz_class n, int tries){
 }
 
 bool isPrime(mpz_class x) {
-    bool a = mpz_probab_prime_p(x.get_mpz_t(), 25) == 1;
+    bool a = mpz_probab_prime_p(x.get_mpz_t(), 25) >= 1;
     bool b = millerRabin(x, 25);
+    if (a != b) {
+        cout << "x " << x << endl;
+    }
     assert(a==b);
     return a;
     
@@ -598,6 +601,8 @@ public:
         return primeBase;
     }
     
+    
+    
     vector<pair<long, vector<long>>> generatePrimeBase2() {
         vector<pair<long, vector<long>>> primeBase;
         
@@ -664,7 +669,7 @@ int main(int argc, const char * argv[]) {
     n *= big;
     n += 1;
     n = 12;
-    n = 15347;
+    n = 15348;
 //    n = 9011221992;
     vector<pair<mpz_class, long>> v;
     auto number = FactorNumber(n, v, n).quadraticSieve();
