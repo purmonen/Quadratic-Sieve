@@ -261,12 +261,15 @@ vector<long> generatePrimes(long limit) {
     return primes;
 }
 
-auto primes = generatePrimes(1e10);
+auto primes = generatePrimes(1e7);
 
+
+mpz_class pollardLastX = 0;
+mpz_class pollardLastY = 0;
+mpz_class pollardLastStartValue = 0;
 mpz_class pollard(mpz_class n, long startValue, mpz_class limit) {
     mpz_class x = startValue, y = startValue, d = 1;
     auto startTime = chrono::system_clock::now();
-
     int iterations = 0;
     while (d == 1) {
         iterations++;
@@ -286,6 +289,8 @@ mpz_class pollard(mpz_class n, long startValue, mpz_class limit) {
     }
     return (d == n) ? NULL : d;
 }
+
+
 
 long a = 1;
 
@@ -489,7 +494,7 @@ public:
             printVector(primePair.second);
         }
         cout<<endl<<endl;
-        auto count = primeBase.size() * 10;
+        auto count = primeBase.size() * 2;
         
         
         logger.log("Generating Y");
@@ -546,20 +551,29 @@ public:
         auto columns = y.size();
         logger.log("Transposing matrix " + to_string(rows) + "x" + to_string(columns));
         vector<mpz_class> matrix(rows, mpz_class(0));
-        for (int row = 0; row < rows; row++) {
-            for (int column = 0; column < columns; column++) {
+        for (auto row = 0; row < rows; row++) {
+            for (auto column = 0; column < columns; column++) {
                 if (isBitSet(bitsets[column], row)) {
                     setBit(matrix[row], column);
                 }
             }
         }
+        
+        
+        
+//        cout << "Bit sets" << endl;
+//        printBitVector(bitsets, rows);
+//        cout << "Matrix" << endl;
+//        printBitVector(matrix, columns);
+        
+        
         logger.log("Gauss elmination");
         // Echelon matrix
         long i = 0;
         long j = columns-1;
-        int lastNonZeroRow = -1;
+        long lastNonZeroRow = -1;
         while (i < rows && j >= 0) {
-            for (int row = i+1; row < rows; row++) {
+            for (auto row = i+1; row < rows; row++) {
                 if (isBitSet(matrix[row], j)) {
                     swap(matrix[i], matrix[row]);
                     break;
@@ -567,7 +581,7 @@ public:
             }
             if (isBitSet(matrix[i], j)) {
                 lastNonZeroRow = i;
-                for (int row = i + 1; row < rows; row++) {
+                for (auto row = i + 1; row < rows; row++) {
                     if (isBitSet(matrix[row], j)) {
                         matrix[row] ^= matrix[i];
                     }
@@ -577,12 +591,22 @@ public:
             j--;
         }
         
+
+        
+        
         logger.log("Calculating solution");
         vector<mpz_class> solutionMatrix(matrix);
         gmpRandom.get_z_bits(columns);
-        mpz_class solution = gmpRandom.get_z_bits(columns);
-//        solution = ~solution;
-        long row = lastNonZeroRow;
+        mpz_class solution = 0;//gmpRandom.get_z_bits(columns);
+        solution = ~solution;
+
+        for (int i = 0; i < columns; i++) {
+            if (y[i] != 1) {
+                unsetBit(solution, i);
+            }
+        }
+        
+        long row = rows-1;
         while (row >= 0) {
             if (countOnes(solution & matrix[row]) % 2 == 1) {
                 flipBit(solution, leftMostOne(matrix[row]));
@@ -610,13 +634,15 @@ public:
         logger.log("Multiplying large numbers");
         for (auto i = 0; i < columns; i++) {
             if (isBitSet(solution, i)) {
-                Y *= oldY[columns-i];
-                X *= ((columns-i) + quotientSqrt);
+                Y *= oldY[i];
+                X *= ((i) + quotientSqrt);
             }
         }
         if (msqrtceiling(Y) != msqrtfloor(Y)) {
             cout << "ERROR ultra bug in roots" << endl;
         }
+        cout << "Y^2: " << Y << endl;
+
         Y = msqrtceiling(Y);
 
         cout << "Y^2: " << Y << endl;
@@ -746,7 +772,7 @@ public:
 bool factorize(mpz_class n) {
     vector<pair<mpz_class, long>> v;
     auto number = FactorNumber(n, v, n);
-    number = number.primalDivision();
+    number = number.quadraticSieve();
     number.internalCheck();
     number.print();
     return number.quotient == 1;
@@ -756,17 +782,17 @@ int main(int argc, const char * argv[]) {
 
     mpz_class n("9011221992");
     mpz_class big;
-    mpz_pow_ui(big.get_mpz_t(), ((mpz_class)10).get_mpz_t(), 60);
+    mpz_pow_ui(big.get_mpz_t(), ((mpz_class)10).get_mpz_t(), 10);
     n *= big;
     n += 0;
-//    n = 15348;
+    n = 15350;
     int count = 0;
 
-    for (int i = 1; i < 100; i++) {
-        if (factorize(n+i)) {
+//    for (int i = 1; i < 100; i++) {
+        if (factorize(n)) {
             count++;
         }
-    }
+//    }
     cout << "Factored " << count << endl;
     return 0;
 }
