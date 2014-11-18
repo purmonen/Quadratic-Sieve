@@ -130,7 +130,7 @@ bool millerRabin(mpz_class n, int tries){
         bool ok = false;
         for (int j = 1; j<s; j++){
             x = (x * x) % n;
-            cout<<x<<" "<<endl;
+//            cout<<x<<" "<<endl;
             if (x == 1) return false;
             if (x == (n-1)) {
                 ok = true;
@@ -147,9 +147,9 @@ bool millerRabin(mpz_class n, int tries){
 bool isPrime(mpz_class x) {
     bool a = mpz_probab_prime_p(x.get_mpz_t(), 25) >= 1;
     bool b = millerRabin(x, 25);
-    if (a != b) {
-        cout << "x " << x << endl;
-    }
+//    if (a != b) {
+//        cout << "x " << x << endl;
+//    }
     assert(a==b);
     return a;
     
@@ -551,13 +551,13 @@ public:
                     }
                 }
             }
-            x++;
             if (value == 1) {
                 bitsets.push_back(bitset);
                 oldY.push_back(oldValue);
                 oldX.push_back(x);
                 sieveCount++;
             }
+            x++;
         }
         
         
@@ -877,7 +877,7 @@ bool factorize(mpz_class n) {
         }
     }
     
-    cout << number.number << " factorized" << endl;
+    cout << number.number << " factorized " << primeFactors.size() << endl;
     
     mpz_class sum = 1;
     bool isPrimes = true;
