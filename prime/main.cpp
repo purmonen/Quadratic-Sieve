@@ -233,6 +233,7 @@ static vector<long> generatePrimes2(long maxprime)
     return result;
 }
 
+
 vector<long> generatePrimes(long limit) {
     cout << "Generating primes" << endl;
     string primeFileName = "primes" + to_string(limit) + ".txt";
@@ -354,7 +355,7 @@ public:
         //        print();
         
         if (isPrime(quotient)) {
-            cout << "Quotient is prime" << endl;
+       //     cout << "Quotient is prime" << endl;
             this->factors.push_back(pair<mpz_class, long>(quotient, 1));
             this->quotient = 1;
         }
@@ -362,13 +363,13 @@ public:
     
     
     FactorNumber pollardish(mpz_class limit) {
-        cout << "Pollardish" << endl;
+        //cout << "Pollardish" << endl;
         vector<pair<mpz_class, long>> factors(this->factors);
         auto quotient = this->quotient;
         
         for (auto startValue = 2; startValue <= 3; startValue++) {
             if (isPrime(quotient)) {
-                cout << "IS PRIME" << endl;
+          //      cout << "IS PRIME" << endl;
                 break;
             }
             auto factor = pollard(quotient, startValue, 10);
@@ -752,7 +753,7 @@ bool factorize(mpz_class n) {
     return number.quotient == 1;
 }
 
-int main(int argc, const char * argv[]) {
+int main2(int argc, const char * argv[]) {
 
     mpz_class n("9011221992");
     mpz_class big;
