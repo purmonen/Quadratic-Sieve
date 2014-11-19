@@ -948,7 +948,7 @@ public:
 bool factorize(mpz_class n) {
     vector<pair<mpz_class, long>> v;
     auto number = FactorNumber(n, v, n);
-    number = number.quadraticSieve();
+    number = number.primalDivision().pollardish(1e7).quadraticSieve();
     vector<pair<mpz_class, long>> primeFactors;
     vector<pair<mpz_class, long>> factors(number.factors);
     if (number.quotient != 1) {
@@ -994,7 +994,7 @@ int main(int argc, const char * argv[]) {
     
     mpz_class n("9011221992");
     mpz_class big;
-    mpz_pow_ui(big.get_mpz_t(), ((mpz_class)10).get_mpz_t(), 40);
+    mpz_pow_ui(big.get_mpz_t(), ((mpz_class)10).get_mpz_t(), 60);
     n *= big;
     n += 0;
     //n = 15346;//503*509;
