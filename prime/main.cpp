@@ -527,7 +527,7 @@ public:
         // Sieving
         vector<mpz_class> oldY;
         vector<mpz_class> oldX;
-        vector<mpz_class> bitsets;
+        vector<mpz_class> bitsets(primeBase.size(), 0);
         
         vector<long> oldi;
         vector<long> oldPrime;
@@ -586,7 +586,7 @@ public:
                 }
                 oldi[j] = i;
             }
-            for (int i = lowLimit; i<highLimit; i++){
+            for (auto i = lowLimit; i<highLimit; i++){
                 //                if (oldy[i-lowLimit]==1){
                 //                    cout << "Old way " << i << endl;
                 //                    oldX.push_back(i);
@@ -599,13 +599,19 @@ public:
                     mpz_class y = (quotientSqrt + i)*(quotientSqrt + i) - quotient;
                     
                     mpz_class bitset = 0;
+                    vector<long> v;
                     for(auto p = 0; p < primeBase.size(); p++) {
                         while(mpz_divisible_ui_p(y.get_mpz_t(), primeBase[p].first)) {
                             mpz_divexact_ui(y.get_mpz_t(), y.get_mpz_t(), primeBase[p].first);
-                            bitset ^= (((mpz_class)1) << p);
+//                            bitset ^= (((mpz_class)1) << p);
+                            v.push_back(p);
+
                         }
                     }
                     if (y == 1) {
+                        for (auto p: v) {
+                            bitsets[p] ^= (((mpz_class)1) << sieveCount);
+                        }
                         oldX.push_back(i);
                         oldY.push_back((quotientSqrt + i)*(quotientSqrt + i) - quotient);
                         bitsets.push_back(bitset);
@@ -697,15 +703,15 @@ public:
         //        cout << "AFTER SHIFTING" << endl;
         //        printBitVector(bitsets, rows);
         
-        logger.log("Transposing matrix " + to_string(rows) + "x" + to_string(columns));
-        vector<mpz_class> matrix(rows, mpz_class(0));
-        for (auto row = 0; row < rows; row++) {
-            for (auto column = 0; column < columns; column++) {
-                if (isBitSet(bitsets[column], row)) {
-                    setBit(matrix[row], column);
-                }
-            }
-        }
+//        logger.log("Transposing matrix " + to_string(rows) + "x" + to_string(columns));
+//        vector<mpz_class> matrix(rows, mpz_class(0));
+//        for (auto row = 0; row < rows; row++) {
+//            for (auto column = 0; column < columns; column++) {
+//                if (isBitSet(bitsets[column], row)) {
+//                    setBit(matrix[row], column);
+//                }
+//            }
+//        }
         
         
         
@@ -714,7 +720,8 @@ public:
         //        cout << "Matrix" << endl;
         //        printBitVector(matrix, columns);
         
-        
+        vector<mpz_class> matrix = bitsets;
+
         logger.log("Gauss elmination");
         // Echelon matrix
         long i = 0;
@@ -747,8 +754,8 @@ public:
             mpz_class solution = gmpRandom.get_z_bits(columns);
             //            solution = ~solution;
             
-            cout << "Solution start value "  << endl;
-            printBits(solution, columns);
+//            cout << "Solution start value "  << endl;
+//            printBits(solution, columns);
             
             long row = lastNonZeroRow;
             while (row >= 0) {
@@ -761,8 +768,8 @@ public:
                 row--;
             }
             
-            cout << "Solution final" << endl;
-            printBits(solution, columns);
+//            cout << "Solution final" << endl;
+//            printBits(solution, columns);
             
             for (auto row = 0; row < rows; row++) {
                 if (countOnes(solution & matrix[row]) % 2 != 0) {
@@ -778,7 +785,6 @@ public:
             
             mpz_class Y = 1;
             mpz_class X = 1;
-            logger.log("Multiplying large numbers");
             for (auto i = 0; i < columns; i++) {
                 if (isBitSet(solution, i)) {
                     Y *= oldY[i];
@@ -788,12 +794,12 @@ public:
             if (msqrtceiling(Y) != msqrtfloor(Y)) {
                 cout << "ERROR ultra bug in roots" << endl;
             }
-            cout << "Y^2: " << Y << endl;
+//            cout << "Y^2: " << Y << endl;
             
             Y = msqrtceiling(Y);
             
-            cout << "Y^2: " << Y << endl;
-            cout << "X^2: " << X << endl;
+//            cout << "Y^2: " << Y << endl;
+//            cout << "X^2: " << X << endl;
             cout << "N: " << quotient << endl;
             cout << "X-Y: " << gcd((X-Y), quotient) << endl;
             cout << "X+Y: " << gcd((X+Y), quotient / gcd((X-Y), quotient)) << endl;
@@ -942,7 +948,7 @@ public:
 bool factorize(mpz_class n) {
     vector<pair<mpz_class, long>> v;
     auto number = FactorNumber(n, v, n);
-    number = number.primalDivision().quadraticSieve();
+    number = number.quadraticSieve();
     vector<pair<mpz_class, long>> primeFactors;
     vector<pair<mpz_class, long>> factors(number.factors);
     if (number.quotient != 1) {
@@ -988,7 +994,7 @@ int main(int argc, const char * argv[]) {
     
     mpz_class n("9011221992");
     mpz_class big;
-    mpz_pow_ui(big.get_mpz_t(), ((mpz_class)10).get_mpz_t(), 60);
+    mpz_pow_ui(big.get_mpz_t(), ((mpz_class)10).get_mpz_t(), 40);
     n *= big;
     n += 0;
     //n = 15346;//503*509;
