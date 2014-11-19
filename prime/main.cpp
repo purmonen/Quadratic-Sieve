@@ -17,6 +17,7 @@
 #include <assert.h>
 #include <time.h>
 #include <fstream>
+#include <thread>
 
 using namespace std;
 
@@ -261,7 +262,7 @@ vector<long> generatePrimes(long limit) {
     return primes;
 }
 
-auto primes = generatePrimes(1e8);
+auto primes = generatePrimes(4e9);
 
 mpz_class pollard2(mpz_class n, long startValue, mpz_class limit, vector<pair<mpz_class, long>> &factors) {
     mpz_class x = startValue, y = startValue, d = 1;
@@ -320,7 +321,7 @@ mpz_class pollard(mpz_class n, long startValue, mpz_class limit) {
 
 
 
-long a = 1;
+//long a = 1;
 
 mpz_class msqrtfloor(mpz_class x) {
     mpz_class xSqrt;
@@ -383,7 +384,7 @@ public:
         this->quotient = quotient;
         this->quotientSqrt = msqrtceiling(quotient);
         double n = number.get_d();
-        B = 1*exp(0.5*sqrt(log(n)*log(log(n)))) + 300;
+        B = 0.7*exp(0.5*sqrt(log(n)*log(log(n)))) + 300;
         //        print();
         
         if (isPrime(quotient)) {
@@ -395,11 +396,13 @@ public:
     
     
     FactorNumber pollardish(mpz_class limit) {
+        
         cout << "Pollardish" << endl;
         vector<pair<mpz_class, long>> factors(this->factors);
         auto quotient = this->quotient;
 
-        if (!isPrime(this->quotient)) {
+        
+        if (!isPrime(this->quotient) && this->quotient != 1) {
             for (auto startValue = 2; startValue <= 2; startValue++) {
                 if (isPrime(quotient)) {
                     cout << "IS PRIME" << endl;
@@ -574,7 +577,7 @@ public:
         vector<float> oldPrimeLogs;
         vector<float> oldYLogs;
         vector<long> oldRoot;
-        vector<mpz_class> oldy;
+        //vector<mpz_class> oldy;
         vector<long> oldp;
         vector<mpz_class> bitsets2;
         
@@ -599,18 +602,17 @@ public:
         const auto maxPrimeLog = oldPrimeLogs[oldPrimeLogs.size()-1];
         float nextIndex = 0;
         float lastLog = 0;
-        while (sieveCount < primeBase.size() + 10) {
-            cout<<"New chunk "<<lowLimit<<" "<<sieveCount<<"/"<<primeBase.size()<<endl;
+        while (sieveCount < primeBase.size() * 1.05) {
+            //cout<<"New chunk "<<lowLimit<<" "<<sieveCount<<"/"<<primeBase.size()<<endl;
             for (auto x= lowLimit;x<highLimit;x++){
-                mpz_class value;
                 if (x >= nextIndex) {
-                    value = multiPolynomial(x);
+                    mpz_class value = multiPolynomial(x);
                     //                    mpz_class value = (quotientSqrt + 2*x)*(quotientSqrt + 2*x) - quotient;
                     lastLog = mpz_sizeinbase(value.get_mpz_t(), 2);
                     nextIndex = x*1.8 + 1;
                 }
                 oldYLogs.push_back(lastLog);
-                oldy.push_back(value);
+                //oldy.push_back(value);
                 //                bitsets2.push_back(0);
             }
             
@@ -646,7 +648,6 @@ public:
                             mpz_divexact_ui(y.get_mpz_t(), y.get_mpz_t(), primeBase[p].first);
                             //                            bitset ^= (((mpz_class)1) << p);
                             v.push_back(p);
-                            
                         }
                     }
                     if (y == 1) {
@@ -803,9 +804,9 @@ public:
                 if (countOnes(solution & matrix[row]) % 2 == 1) {
                     flipBit(solution, leftMostOne(matrix[row]));
                 }
-                if (countOnes(solution & matrix[row]) % 2 == 1) {
-                    cout << "WHAT?!?!?!?!? SHOULD BE 0" << endl;
-                }
+//                if (countOnes(solution & matrix[row]) % 2 == 1) {
+//                    cout << "WHAT?!?!?!?!? SHOULD BE 0" << endl;
+//                }
                 row--;
             }
             
@@ -986,10 +987,10 @@ public:
     }
 };
 ofstream primeFile;
-bool factorize(mpz_class n) {
+bool factorize(mpz_class n,int id) {
     vector<pair<mpz_class, long>> v;
     auto number = FactorNumber(n, v, n);
-    number = number.primalDivision().pollardish(10).quadraticSieve();
+    number = number.primalDivision().pollardish(200).quadraticSieve();
     vector<pair<mpz_class, long>> primeFactors;
     vector<pair<mpz_class, long>> factors(number.factors);
     if (number.quotient != 1) {
@@ -1013,7 +1014,7 @@ bool factorize(mpz_class n) {
             primeFactors.push_back(factors[i]);
         }
     }
-    cout << number.number << " factorized" << endl;
+    cout << number.number << " factorized "<<id << endl;
     mpz_class sum = 1;
     bool isPrimes = true;
     primeFile << number.number << endl;
@@ -1029,30 +1030,115 @@ bool factorize(mpz_class n) {
     return sum == n && isPrimes;
 }
 
+
+
+static int c=0;
+int maxNumber=50;
+int parts = 8;
+int readIndex=0;
+vector<pair<int,mpz_class>> numbers;
+
+void threadStart(){
+    cout<<"hej"<<endl;
+    while(true){
+        if (!(readIndex<numbers.size())) break;
+        auto number = numbers[readIndex];
+        readIndex++;
+        factorize(mpz_class(number.second),number.first);
+        
+    }
+        
+}
+
+
+
 int main(int argc, const char * argv[]) {
-    mpz_class n("9011221992");
+    
+    primeFile.open("allFile");
+    
+//    numbers.push_back(pair<int, string>(72, "18996132722529700846131152050354296149651028364846574144251"));
+//    numbers.push_back(pair<int, string>(65, "49889279266115200775059218503419030500864403901007887784019"));
+//    numbers.push_back(pair<int, string>(83, "576334751456718155780563596342841412581309943878204372176377"));
+//    numbers.push_back(pair<int, string>(83, "576334751456718155780563596342841412581309943878204372176377"));
+//    numbers.push_back(pair<int, string>(68, "132075896758185134019024337813752764118268966348101728020913071"));
+//    numbers.push_back(pair<int, string>(54, "509400163949517821526234998932320292279137672740118034256802641"));
+//
+//    
+//    numbers.push_back(pair<int, string>(52, "5000549540354583606931795472064407457104519370771119422160047963"));
+//    numbers.push_back(pair<int, string>(68, "132075896758185134019024337813752764118268966348101728020913071"));
+//    numbers.push_back(pair<int, string>(52, "5000549540354583606931795472064407457104519370771119422160047963"));
+//    numbers.push_back(pair<int, string>(100, "134285690158745136430586046292187179785833393536668254068885393"));
+//
+//    numbers.push_back(pair<int, string>(42, "57894133910069793163066831085290042079302322624934847001690799761"));
+    
+    
+//    numbers.push_back(pair<int, string>(42, "57894133910069793163066831085290042079302322624934847001690799761"));
+//    numbers.push_back(pair<int, string>(42, "57894133910069793163066831085290042079302322624934847001690799761"));
+//    numbers.push_back(pair<int, string>(42, "57894133910069793163066831085290042079302322624934847001690799761"));
+//    numbers.push_back(pair<int, string>(42, "57894133910069793163066831085290042079302322624934847001690799761"));
+    
+
+    for (int i=75;i<=90;i++)
+        numbers.push_back(pair<int, mpz_class>(i, mpz_class("9011221992000000000000000000000000000000000000000000000000000000000000")+i));
+    for (int i=95;i<=100;i++)
+        numbers.push_back(pair<int, mpz_class>(i, mpz_class("9011221992000000000000000000000000000000000000000000000000000000000000")+i));
+    
+    thread **threads = (thread**)malloc(sizeof(thread)*8);
+    
+    for (int c=0; c<parts; c++){
+        threads[c] = new thread(threadStart);
+        chrono::milliseconds duration(100);
+        this_thread::sleep_for(duration);
+        
+        
+    }
+    for (int c=0; c<parts; c++){
+        threads[c]->join();
+    }
+    
+    return 0;
+}
+
+
+
+int main2(int argc, const char * argv[]) {
+    mpz_class n("28285080712529225758938006451268448739600961791355237");
     mpz_class big;
     
-    auto j = atoi(argv[1]);
-    auto start = atoi(argv[2]);
-    auto end = atoi(argv[3]);
+    
+    long j ;
+    long start;
+    long end ;
+    
+    if (argc<2){
+        j=50;
+        start = 1;
+        end = 1;
+    }else{
+         j = atoi(argv[1]);
+         start = atoi(argv[2]);
+         end = atoi(argv[3]);
+    }
     cout << "j, start, end " << j << ", " << start << ", " << end << endl;
     
     mpz_pow_ui(big.get_mpz_t(), ((mpz_class)10).get_mpz_t(), j);
     string fileName = "primes" + to_string(j) + "-" + to_string(start) + "-" + to_string(end) + ".txt";
-    primeFile.open(fileName);
-    n *= big;
+    primeFile.open("out26");
+    //n *= big;
     //n = 15346;//503*509;
     //    n = 19;
     int count = 0;
     Logger logger = Logger();
-    //    logger.log("Primal division");
-    
-    for (int i = start; i <= end; i++) {
-        if (factorize(n+i)) {
-            count++;
-        }
+    for (auto s:numbers) {
+        mpz_class n(s.second);
+        cout<<endl;
+        cout<<s.first;
+        //if (factorize(n)) {
+        //    count++;
+        //}
+        cout<<s.first;
     }
+    //}
     logger.log("");
     cout << "Factored " << count << endl;
     return 0;
