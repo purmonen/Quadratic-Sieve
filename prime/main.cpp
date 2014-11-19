@@ -261,7 +261,7 @@ vector<long> generatePrimes(long limit) {
     return primes;
 }
 
-auto primes = generatePrimes(1e8);
+auto primes = generatePrimes(1e10);
 
 mpz_class pollard2(mpz_class n, long startValue, mpz_class limit, vector<pair<mpz_class, long>> &factors) {
     mpz_class x = startValue, y = startValue, d = 1;
@@ -383,7 +383,7 @@ public:
         this->quotient = quotient;
         this->quotientSqrt = msqrtceiling(quotient);
         double n = number.get_d();
-        B = 1*exp(0.5*sqrt(log(n)*log(log(n)))) + 300;
+        B = 0.6*exp(0.5*sqrt(log(n)*log(log(n)))) + 300;
         //        print();
         
         if (isPrime(quotient)) {
@@ -399,9 +399,9 @@ public:
         vector<pair<mpz_class, long>> factors(this->factors);
         auto quotient = this->quotient;
 
-        if (!isPrime(this->quotient)) {
+        if (this->quotient != 1) {
             for (auto startValue = 2; startValue <= 2; startValue++) {
-                if (isPrime(quotient)) {
+                if (quotient == 1) {
                     cout << "IS PRIME" << endl;
                     break;
                 }
@@ -574,7 +574,7 @@ public:
         vector<float> oldPrimeLogs;
         vector<float> oldYLogs;
         vector<long> oldRoot;
-        vector<mpz_class> oldy;
+//        vector<mpz_class> oldy;
         vector<long> oldp;
         vector<mpz_class> bitsets2;
         
@@ -610,7 +610,7 @@ public:
                     nextIndex = x*1.8 + 1;
                 }
                 oldYLogs.push_back(lastLog);
-                oldy.push_back(value);
+//                oldy.push_back(value);
                 //                bitsets2.push_back(0);
             }
             
@@ -800,12 +800,17 @@ public:
             
             long row = lastNonZeroRow;
             while (row >= 0) {
+//                mpz_class tmp = solution & matrix[row];
+//                mp_size_t size;
+//                mp_limb_t apa(tmp);
+//                
+//                mpz_popcount(apa, size);
                 if (countOnes(solution & matrix[row]) % 2 == 1) {
                     flipBit(solution, leftMostOne(matrix[row]));
                 }
-                if (countOnes(solution & matrix[row]) % 2 == 1) {
-                    cout << "WHAT?!?!?!?!? SHOULD BE 0" << endl;
-                }
+//                if (countOnes(solution & matrix[row]) % 2 == 1) {
+//                    cout << "WHAT?!?!?!?!? SHOULD BE 0" << endl;
+//                }
                 row--;
             }
             
@@ -989,7 +994,7 @@ ofstream primeFile;
 bool factorize(mpz_class n) {
     vector<pair<mpz_class, long>> v;
     auto number = FactorNumber(n, v, n);
-    number = number.primalDivision().pollardish(10).quadraticSieve();
+    number = number.primalDivision().pollardish(120).quadraticSieve();
     vector<pair<mpz_class, long>> primeFactors;
     vector<pair<mpz_class, long>> factors(number.factors);
     if (number.quotient != 1) {
@@ -1032,6 +1037,7 @@ bool factorize(mpz_class n) {
 int main(int argc, const char * argv[]) {
     mpz_class n("9011221992");
     mpz_class big;
+    
     
     auto j = atoi(argv[1]);
     auto start = atoi(argv[2]);
