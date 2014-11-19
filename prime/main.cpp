@@ -16,6 +16,7 @@
 #include <math.h>
 #include <assert.h>
 #include <time.h>
+#include <fstream>
 
 using namespace std;
 
@@ -31,8 +32,8 @@ void flipBit(mpz_class &x, long i) {
     x ^= (((mpz_class)1) << i);
 }
 
-bool isBitSet(mpz_class x, long i) {
-    return ((x >> i) & 1) == 1 ? true : false;
+inline const bool isBitSet(const mpz_class &x, const long &i) {
+    return ((x >> i) & 1) == 1;
 }
 
 long countOnes(mpz_class x) {
@@ -260,7 +261,40 @@ vector<long> generatePrimes(long limit) {
     return primes;
 }
 
-auto primes = generatePrimes(1e9);
+auto primes = generatePrimes(1e8);
+
+mpz_class pollard2(mpz_class n, long startValue, mpz_class limit, vector<pair<mpz_class, long>> &factors) {
+    mpz_class x = startValue, y = startValue, d = 1;
+    auto startTime = chrono::system_clock::now();
+    if (isPrime(n )) return n;
+    int iterations = 0;
+    while (d == 1) {
+        iterations++;
+        if (iterations > 10000) {
+            iterations = 0;
+            if (((chrono::system_clock::now() - startTime).count() / 1e6) > limit) {
+                //cout << "#Hit pollard limit " << startValue << endl;
+                //break;
+                return n;
+            }
+            
+        }
+        x = f(x, n);
+        y = f(f(y, n), n);
+        mpz_class a;
+        mpz_abs(a.get_mpz_t(), ((mpz_class)(x-y)).get_mpz_t());
+        d = gcd(a, n);
+        
+        if (d != n && d != 1){
+            //cout<<"#Pollard found factor "<<d<<" wtíth start value "<<startValue<<endl;
+            factors.push_back(pair<mpz_class, long>(d, 1));
+            n /= d;
+            if (isPrime( n)) return n;
+            d = 1;
+        }
+    }
+    return n;
+}
 
 mpz_class pollard(mpz_class n, long startValue, mpz_class limit) {
     mpz_class x = startValue, y = startValue, d = 1;
@@ -272,9 +306,8 @@ mpz_class pollard(mpz_class n, long startValue, mpz_class limit) {
             iterations = 0;
             if (((chrono::system_clock::now() - startTime).count() / 1e6) > limit) {
                 cout << "Hit pollard limit " << startValue << endl;
-                break;
+                return NULL;
             }
-            return NULL;
         }
         x = f(x, n);
         y = f(f(y, n), n);
@@ -365,17 +398,19 @@ public:
         cout << "Pollardish" << endl;
         vector<pair<mpz_class, long>> factors(this->factors);
         auto quotient = this->quotient;
-        
-        for (auto startValue = 2; startValue <= 3; startValue++) {
-            if (isPrime(quotient)) {
-                cout << "IS PRIME" << endl;
-                break;
-            }
-            auto factor = pollard(quotient, startValue, 10);
-            if (factor != NULL) {
-                cout << "Pollard found " << factor << endl;
-                factors.push_back(std::pair<mpz_class, long>(factor, 1));
-                quotient /= factor;
+
+        if (!isPrime(this->quotient)) {
+            for (auto startValue = 2; startValue <= 2; startValue++) {
+                if (isPrime(quotient)) {
+                    cout << "IS PRIME" << endl;
+                    break;
+                }
+                auto factor = pollard(quotient, startValue, limit);
+                if (factor != NULL) {
+                    cout << "Pollard found " << factor << endl;
+                    factors.push_back(std::pair<mpz_class, long>(factor, 1));
+                    quotient /= factor;
+                }
             }
         }
         return FactorNumber(number, factors, quotient);
@@ -456,6 +491,11 @@ public:
         mpz_class pow;
         mpz_pow_ui(pow.get_mpz_t(), x.get_mpz_t(), a);
         return pow;
+    }
+    
+    inline const mpz_class multiPolynomial(const mpz_class &x) {
+        mpz_class p = 1;
+        return (quotientSqrt + x*p)*(quotientSqrt + x*p) - quotient;
     }
     
     FactorNumber quadraticSieve() {
@@ -562,20 +602,22 @@ public:
         while (sieveCount < primeBase.size() + 10) {
             cout<<"New chunk "<<lowLimit<<" "<<sieveCount<<"/"<<primeBase.size()<<endl;
             for (auto x= lowLimit;x<highLimit;x++){
+                mpz_class value;
                 if (x >= nextIndex) {
-                    mpz_class value = (quotientSqrt + x)*(quotientSqrt + x) - quotient;
+                    value = multiPolynomial(x);
                     //                    mpz_class value = (quotientSqrt + 2*x)*(quotientSqrt + 2*x) - quotient;
                     lastLog = mpz_sizeinbase(value.get_mpz_t(), 2);
                     nextIndex = x*1.8 + 1;
                 }
                 oldYLogs.push_back(lastLog);
-                //                oldy.push_back(value);
+                oldy.push_back(value);
                 //                bitsets2.push_back(0);
             }
             
             for (int j = 0; j < maxIndex; j++){//for each prime
                 long prime = oldPrime[j];
                 //                long p = oldp[j];
+                
                 auto i = oldi[j];
                 for (; i<highLimit; i += prime){
                     oldYLogs[i-lowLimit] -= oldPrimeLogs[j];
@@ -596,16 +638,15 @@ public:
                 //                }
                 
                 if (oldYLogs[i-lowLimit] < maxPrimeLog) {
-                    mpz_class y = (quotientSqrt + i)*(quotientSqrt + i) - quotient;
-                    
+                    mpz_class y = multiPolynomial(i);
                     mpz_class bitset = 0;
                     vector<long> v;
                     for(auto p = 0; p < primeBase.size(); p++) {
                         while(mpz_divisible_ui_p(y.get_mpz_t(), primeBase[p].first)) {
                             mpz_divexact_ui(y.get_mpz_t(), y.get_mpz_t(), primeBase[p].first);
-//                            bitset ^= (((mpz_class)1) << p);
+                            //                            bitset ^= (((mpz_class)1) << p);
                             v.push_back(p);
-
+                            
                         }
                     }
                     if (y == 1) {
@@ -703,15 +744,15 @@ public:
         //        cout << "AFTER SHIFTING" << endl;
         //        printBitVector(bitsets, rows);
         
-//        logger.log("Transposing matrix " + to_string(rows) + "x" + to_string(columns));
-//        vector<mpz_class> matrix(rows, mpz_class(0));
-//        for (auto row = 0; row < rows; row++) {
-//            for (auto column = 0; column < columns; column++) {
-//                if (isBitSet(bitsets[column], row)) {
-//                    setBit(matrix[row], column);
-//                }
-//            }
-//        }
+        //        logger.log("Transposing matrix " + to_string(rows) + "x" + to_string(columns));
+        //        vector<mpz_class> matrix(rows, mpz_class(0));
+        //        for (auto row = 0; row < rows; row++) {
+        //            for (auto column = 0; column < columns; column++) {
+        //                if (isBitSet(bitsets[column], row)) {
+        //                    setBit(matrix[row], column);
+        //                }
+        //            }
+        //        }
         
         
         
@@ -721,7 +762,7 @@ public:
         //        printBitVector(matrix, columns);
         
         vector<mpz_class> matrix = bitsets;
-
+        
         logger.log("Gauss elmination");
         // Echelon matrix
         long i = 0;
@@ -754,8 +795,8 @@ public:
             mpz_class solution = gmpRandom.get_z_bits(columns);
             //            solution = ~solution;
             
-//            cout << "Solution start value "  << endl;
-//            printBits(solution, columns);
+            //            cout << "Solution start value "  << endl;
+            //            printBits(solution, columns);
             
             long row = lastNonZeroRow;
             while (row >= 0) {
@@ -768,8 +809,8 @@ public:
                 row--;
             }
             
-//            cout << "Solution final" << endl;
-//            printBits(solution, columns);
+            //            cout << "Solution final" << endl;
+            //            printBits(solution, columns);
             
             for (auto row = 0; row < rows; row++) {
                 if (countOnes(solution & matrix[row]) % 2 != 0) {
@@ -794,12 +835,12 @@ public:
             if (msqrtceiling(Y) != msqrtfloor(Y)) {
                 cout << "ERROR ultra bug in roots" << endl;
             }
-//            cout << "Y^2: " << Y << endl;
+            //            cout << "Y^2: " << Y << endl;
             
             Y = msqrtceiling(Y);
             
-//            cout << "Y^2: " << Y << endl;
-//            cout << "X^2: " << X << endl;
+            //            cout << "Y^2: " << Y << endl;
+            //            cout << "X^2: " << X << endl;
             cout << "N: " << quotient << endl;
             cout << "X-Y: " << gcd((X-Y), quotient) << endl;
             cout << "X+Y: " << gcd((X+Y), quotient / gcd((X-Y), quotient)) << endl;
@@ -944,11 +985,11 @@ public:
         return primeBase;
     }
 };
-
+ofstream primeFile;
 bool factorize(mpz_class n) {
     vector<pair<mpz_class, long>> v;
     auto number = FactorNumber(n, v, n);
-    number = number.primalDivision().pollardish(1e7).quadraticSieve();
+    number = number.primalDivision().pollardish(10).quadraticSieve();
     vector<pair<mpz_class, long>> primeFactors;
     vector<pair<mpz_class, long>> factors(number.factors);
     if (number.quotient != 1) {
@@ -972,40 +1013,43 @@ bool factorize(mpz_class n) {
             primeFactors.push_back(factors[i]);
         }
     }
-    
     cout << number.number << " factorized" << endl;
-    
-    
-    
     mpz_class sum = 1;
     bool isPrimes = true;
+    primeFile << number.number << endl;
     for (auto primeFactor: primeFactors) {
         isPrimes = isPrimes & isPrime(primeFactor.first);
         sum *= powNoMod(primeFactor.first, primeFactor.second);
+        primeFile << primeFactor.first << "^" << primeFactor.second << "*";
         cout << primeFactor.first << "^" << primeFactor.second << "*";
     }
+    primeFile << endl;
     cout << endl;
-    
     
     return sum == n && isPrimes;
 }
 
 int main(int argc, const char * argv[]) {
-    
     mpz_class n("9011221992");
     mpz_class big;
-    mpz_pow_ui(big.get_mpz_t(), ((mpz_class)10).get_mpz_t(), 60);
+    
+    auto j = atoi(argv[1]);
+    auto start = atoi(argv[2]);
+    auto end = atoi(argv[3]);
+    cout << "j, start, end " << j << ", " << start << ", " << end << endl;
+    
+    mpz_pow_ui(big.get_mpz_t(), ((mpz_class)10).get_mpz_t(), j);
+    string fileName = "primes" + to_string(j) + "-" + to_string(start) + "-" + to_string(end) + ".txt";
+    primeFile.open(fileName);
     n *= big;
-    n += 0;
     //n = 15346;//503*509;
     //    n = 19;
     int count = 0;
     Logger logger = Logger();
     //    logger.log("Primal division");
     
-    for (int i = 1; i <= 1; i++) {
-        n++;
-        if (factorize(n)) {
+    for (int i = start; i <= end; i++) {
+        if (factorize(n+i)) {
             count++;
         }
     }
