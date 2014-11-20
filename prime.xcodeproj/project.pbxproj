@@ -7,9 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		261FD1621A1AE4CA00C05AE5 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 265E976F1A0F32CD002C236B /* main.cpp */; };
 		26912E2D1A17927D00F70C84 /* libgmpxx.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 26912E2C1A17927D00F70C84 /* libgmpxx.a */; };
 		26912E2F1A1792B400F70C84 /* libgmp.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 26912E2E1A1792B400F70C84 /* libgmp.a */; };
+		DAA67E7F1A1E6D7F00EEE70D /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 265E976F1A0F32CD002C236B /* main.cpp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -30,6 +30,7 @@
 		265E976F1A0F32CD002C236B /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; tabWidth = 5; };
 		26912E2C1A17927D00F70C84 /* libgmpxx.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libgmpxx.a; path = ../../../../../usr/local/lib/libgmpxx.a; sourceTree = "<group>"; };
 		26912E2E1A1792B400F70C84 /* libgmp.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libgmp.a; path = ../../../../../usr/local/lib/libgmp.a; sourceTree = "<group>"; };
+		DAA67E781A1E18D700EEE70D /* test.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = test.cpp; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -68,6 +69,7 @@
 			children = (
 				265E976F1A0F32CD002C236B /* main.cpp */,
 				2637DBC51A1AB74C00D0A4CD /* brute.cpp */,
+				DAA67E781A1E18D700EEE70D /* test.cpp */,
 			);
 			path = prime;
 			sourceTree = "<group>";
@@ -128,7 +130,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				261FD1621A1AE4CA00C05AE5 /* main.cpp in Sources */,
+				DAA67E7F1A1E6D7F00EEE70D /* main.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

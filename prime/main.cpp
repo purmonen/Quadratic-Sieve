@@ -18,42 +18,100 @@
 #include <time.h>
 #include <fstream>
 #include <thread>
+#include <chrono>
+#include <algorithm>
 
 using namespace std;
 
-void setBit(mpz_class &x, long i) {
-    x |= (((mpz_class)1) << i);
-}
 
-void unsetBit(mpz_class &x, long i) {
-    x &=~ (((mpz_class)1) << i);
-}
-
-void flipBit(mpz_class &x, long i) {
-    x ^= (((mpz_class)1) << i);
-}
-
-inline const bool isBitSet(const mpz_class &x, const long &i) {
-    return ((x >> i) & 1) == 1;
-}
-
-long countOnes(mpz_class x) {
-    mpz_class count = 0;
-    while (x != 0) {
-        count += x & 1;
-        x >>= 1;
+#define GMP_LIMB_BITS_SHIFTER 6
+struct bitarray{
+    mp_limb_t* limb;
+    long bitSize;
+    mp_size_t limbCount;
+    
+    bitarray(long bitCount){
+        bitSize = bitCount;
+        assert(bitCount!=0);
+        //cout<<"creating with normal constructor"<<endl;
+        limbCount = (bitCount>>GMP_LIMB_BITS_SHIFTER)+1;
+        //cout<<"allocating "<<limbCount<<" for "<<bitCount<<"bits"<<endl;
+        limb = new mp_limb_t[limbCount];
+        memset(limb, 0, limbCount*GMP_LIMB_BITS>>3);
     }
-    return count.get_si();
+    
+    bitarray(bitarray const &b){
+       // cout<<"creating with copy constructor"<<endl;
+        limbCount = b.limbCount;
+        bitSize = b.bitSize;
+        limb = new mp_limb_t[limbCount];
+        memcpy(limb, b.limb, limbCount*8);
+    }
+    
+    ~bitarray(){
+        //cout<<"destorying"<<endl;
+        delete limb;
+    }
+    
+    
+};
+void swap(bitarray &a, bitarray &b){
+    swap(a.limb,b.limb);
+    swap(a.limbCount,b.limbCount);
 }
 
-long leftMostOne(mpz_class x) {
-    mpz_class count = -1;
+void setBit(bitarray &x, const long &i) {
+    assert(i<x.bitSize);
+    const long limb = i >> GMP_LIMB_BITS_SHIFTER;
+    const long bitInLimb = i & 0b11111111ull;
+    x.limb[limb] |= 1ull << bitInLimb;
+}
+
+void unsetBit(bitarray &x, const long &i) {
+    assert(i<x.bitSize);
+    const long limb = i >> GMP_LIMB_BITS_SHIFTER;
+    const long bitInLimb = i & 0b11111111ull;
+    x.limb[limb] &= ~(1ull << bitInLimb);
+}
+
+void flipBit(bitarray &x, const long &i) {
+    assert(i<x.bitSize);
+    const long limb = i >> GMP_LIMB_BITS_SHIFTER;
+    const long bitInLimb = i & 0b11111111ull;
+    x.limb[limb] ^= (1ull << bitInLimb);
+}
+
+inline const bool isBitSet(const bitarray &x, const long &i) {
+    assert(i<x.bitSize);
+    const long limb = i >> GMP_LIMB_BITS_SHIFTER;
+    const long bitInLimb = i & 0b11111111ull;
+    return (x.limb[limb]>>bitInLimb) & 1;
+}
+
+long countOnes(bitarray &x) {
+    return mpn_popcount(x.limb,x.limbCount);
+}
+
+bool isZero(bitarray &bitset) {
+    auto i = bitset.limbCount-1;
+    for (; i>=0; i--) {
+        if (bitset.limb[i] != 0) return true;
+    }
+    return false;}
+
+long leftMostOne(bitarray &bitset) {
+    auto i = bitset.limbCount-1;
+    for (; i>=0; i--) {
+        if (bitset.limb[i] != 0) break;
+    }
+    //cout<<"found in limb "<<i<<endl;
+    auto x = bitset.limb[i];
+    long count = -1;
     while (x != 0) {
         count++;
         x = x >> 1;
     }
-    
-    return count.get_si();
+    return (i<<GMP_LIMB_BITS_SHIFTER) + count;
 }
 
 template <typename T>
@@ -64,7 +122,7 @@ void printVector(std::vector<T> vector) {
     std::cerr << std::endl;
 }
 
-void printBitVector(std::vector<mpz_class> vector, size_t length) {
+void printBitVector(std::vector<bitarray> vector, size_t length) {
     
     for (auto v: vector) {
         for (int i = 0; i < length; i++) {
@@ -75,7 +133,9 @@ void printBitVector(std::vector<mpz_class> vector, size_t length) {
     cout << std::endl;
 }
 
-void printBits(mpz_class v, size_t length) {
+void printBits(bitarray v, int length =-1) {
+    if (length==-1)
+        length = v.limbCount*64;
     for (int i = 0; i < length; i++) {
         cout << isBitSet(v, i);
     }
@@ -262,7 +322,7 @@ vector<long> generatePrimes(long limit) {
     return primes;
 }
 
-auto primes = generatePrimes(4e9);
+auto primes = generatePrimes(1e7);
 
 mpz_class pollard2(mpz_class n, long startValue, mpz_class limit, vector<pair<mpz_class, long>> &factors) {
     mpz_class x = startValue, y = startValue, d = 1;
@@ -287,7 +347,7 @@ mpz_class pollard2(mpz_class n, long startValue, mpz_class limit, vector<pair<mp
         d = gcd(a, n);
         
         if (d != n && d != 1){
-            //cout<<"#Pollard found factor "<<d<<" wtíth start value "<<startValue<<endl;
+            //cout<<"#Pollard found factor "<<d<<" wtÃ­th start value "<<startValue<<endl;
             factors.push_back(pair<mpz_class, long>(d, 1));
             n /= d;
             if (isPrime( n)) return n;
@@ -383,8 +443,8 @@ public:
         this->factors = factors;
         this->quotient = quotient;
         this->quotientSqrt = msqrtceiling(quotient);
-        double n = number.get_d();
-        B = 0.7*exp(0.5*sqrt(log(n)*log(log(n)))) + 300;
+        double n = quotient.get_d();
+        B = 0.7*exp(0.5*sqrt(log(n)*log(log(n)))) + 500;
         //        print();
         
         if (isPrime(quotient)) {
@@ -400,7 +460,7 @@ public:
         cout << "Pollardish" << endl;
         vector<pair<mpz_class, long>> factors(this->factors);
         auto quotient = this->quotient;
-
+        
         
         if (!isPrime(this->quotient) && this->quotient != 1) {
             for (auto startValue = 2; startValue <= 2; startValue++) {
@@ -440,13 +500,14 @@ public:
     }
     
     
-    FactorNumber primalDivision() {
+    FactorNumber primalDivision(long maxValue = 1e13) {
         cout << "Primal division" << endl;
         mpz_class x = quotient;
         vector<pair<mpz_class, long>> factors;
         mpz_class xroot;
         mpz_sqrt(xroot.get_mpz_t(), x.get_mpz_t());
         for (auto i: primes) {
+            if (i>maxValue) break;
             if (i > xroot) {
                 break;
             }
@@ -570,7 +631,11 @@ public:
         // Sieving
         vector<mpz_class> oldY;
         vector<mpz_class> oldX;
-        vector<mpz_class> bitsets(primeBase.size(), 0);
+        
+        long bitWidth = primeBase.size()*1.05+100;
+
+        vector<bitarray> bitsets(primeBase.size(),bitWidth);
+        bitarray tmpBitArray(bitWidth);
         
         vector<long> oldi;
         vector<long> oldPrime;
@@ -579,7 +644,7 @@ public:
         vector<long> oldRoot;
         //vector<mpz_class> oldy;
         vector<long> oldp;
-        vector<mpz_class> bitsets2;
+        //vector<mpz_class> bitsets2;
         
         int index=0;
         for (long long p = 0; p < primeBase.size(); p++) {
@@ -641,7 +706,7 @@ public:
                 
                 if (oldYLogs[i-lowLimit] < maxPrimeLog) {
                     mpz_class y = multiPolynomial(i);
-                    mpz_class bitset = 0;
+
                     vector<long> v;
                     for(auto p = 0; p < primeBase.size(); p++) {
                         while(mpz_divisible_ui_p(y.get_mpz_t(), primeBase[p].first)) {
@@ -651,12 +716,15 @@ public:
                         }
                     }
                     if (y == 1) {
+                        if (sieveCount>=bitWidth) break;
+
                         for (auto p: v) {
-                            bitsets[p] ^= (((mpz_class)1) << sieveCount);
+                            flipBit(bitsets[p], sieveCount);
+//                            bitsets[p] ^= (((mpz_class)1) << sieveCount);
                         }
                         oldX.push_back(i);
                         oldY.push_back((quotientSqrt + i)*(quotientSqrt + i) - quotient);
-                        bitsets.push_back(bitset);
+                        //bitsets.push_back(bitset);
                         sieveCount++;
                     }
                 }
@@ -664,7 +732,6 @@ public:
             }
             //            oldy.clear();
             oldYLogs.clear();
-            bitsets2.clear();
             lowLimit = highLimit;
             highLimit += chunkSize;
             
@@ -710,50 +777,50 @@ public:
         
         cout << "Matrix" << endl;
         
-        //        mpz_class orred = 0;
-        //        for (auto bitset: bitsets) {
-        //            orred |= bitset;
-        //        }
-        //        cout << "BEFRE SHIFTING" << endl;
-        //        printBitVector(bitsets, rows);
-        //
-        //        for (long p = rows-1; p >= 0; p--) {
-        //            if (!isBitSet(orred, p)) {
-        //                mpz_class rightMask = 0;
-        //                for (int i = 0; i < p-1; i++) {
-        //                    rightMask <<= 1;
-        //                    rightMask += 1;
-        //                }
-        //                mpz_class leftMask = ~rightMask;
-        //                unsetBit(leftMask, p);
-        //                for (auto bitset: bitsets) {
-        ////                    cout << "------ " << p << endl;
-        ////                    printBits(bitset, rows);
-        //                    bitset = (bitset & rightMask) | ((bitset & leftMask) >> 1);
-        ////                    printBits(bitset, rows);
-        ////                    printBits(bitset, rows-1);
-        ////                    printBits(1 << p, rows);
-        //                }
-        //                rows--;
-        //
-        //            }
-        //
-        //        }
-        //
-        ////        p1 p2 p3 p4 = 1010
-        ////        p1 p2 p3 p4 = 1011
-        //        cout << "AFTER SHIFTING" << endl;
-        //        printBitVector(bitsets, rows);
-        
-        //        logger.log("Transposing matrix " + to_string(rows) + "x" + to_string(columns));
-        //        vector<mpz_class> matrix(rows, mpz_class(0));
-        //        for (auto row = 0; row < rows; row++) {
-        //            for (auto column = 0; column < columns; column++) {
-        //                if (isBitSet(bitsets[column], row)) {
-        //                    setBit(matrix[row], column);
-        //                }
-        //            }
-        //        }
+//        mpz_class orred = 0;
+//        for (auto bitset: bitsets) {
+//            orred |= bitset;
+//        }
+//        cout << "BEFRE SHIFTING" << endl;
+//        printBitVector(bitsets, rows);
+//        
+//        for (long p = rows-1; p >= 0; p--) {
+//            if (!isBitSet(orred, p)) {
+//                mpz_class rightMask = 0;
+//                for (int i = 0; i < p-1; i++) {
+//                    rightMask <<= 1;
+//                    rightMask += 1;
+//                }
+//                mpz_class leftMask = ~rightMask;
+//                unsetBit(leftMask, p);
+//                for (auto bitset: bitsets) {
+//                    //                    cout << "------ " << p << endl;
+//                    //                    printBits(bitset, rows);
+//                    bitset = (bitset & rightMask) | ((bitset & leftMask) >> 1);
+//                    //                    printBits(bitset, rows);
+//                    //                    printBits(bitset, rows-1);
+//                    //                    printBits(1 << p, rows);
+//                }
+//                rows--;
+//                
+//            }
+//            
+//        }
+//        
+//        //        p1 p2 p3 p4 = 1010
+//        //        p1 p2 p3 p4 = 1011
+//        cout << "AFTER SHIFTING" << endl;
+//        printBitVector(bitsets, rows);
+//        
+//        logger.log("Transposing matrix " + to_string(rows) + "x" + to_string(columns));
+//        vector<mpz_class> matrix(rows, mpz_class(0));
+//        for (auto row = 0; row < rows; row++) {
+//            for (auto column = 0; column < columns; column++) {
+//                if (isBitSet(bitsets[column], row)) {
+//                    setBit(matrix[row], column);
+//                }
+//            }
+//        }
         
         
         
@@ -762,7 +829,7 @@ public:
         //        cout << "Matrix" << endl;
         //        printBitVector(matrix, columns);
         
-        vector<mpz_class> matrix = bitsets;
+        vector<bitarray> matrix = bitsets;
         
         logger.log("Gauss elmination");
         // Echelon matrix
@@ -780,7 +847,8 @@ public:
                 lastNonZeroRow = i;
                 for (auto row = i + 1; row < rows; row++) {
                     if (isBitSet(matrix[row], j)) {
-                        matrix[row] ^= matrix[i];
+                        mpn_xor_n(matrix[row].limb, matrix[row].limb, matrix[i].limb, matrix[row].limbCount);
+//                        matrix[row] ^= matrix[i];
                     }
                 }
                 i++;
@@ -793,7 +861,8 @@ public:
         while (iterations > 0) {
             iterations--;
             gmpRandom.get_z_bits(columns);
-            mpz_class solution = gmpRandom.get_z_bits(columns);
+            bitarray solution(bitWidth);
+            mpn_random(solution.limb,solution.limbCount);
             //            solution = ~solution;
             
             //            cout << "Solution start value "  << endl;
@@ -801,12 +870,15 @@ public:
             
             long row = lastNonZeroRow;
             while (row >= 0) {
-                if (countOnes(solution & matrix[row]) % 2 == 1) {
+                mpn_and_n(tmpBitArray.limb, solution.limb, matrix[row].limb, solution.limbCount);
+                if (countOnes(tmpBitArray) % 2 == 1) {
+                    //printBits(matrix[row]);
                     flipBit(solution, leftMostOne(matrix[row]));
+                    //printBits(matrix[row]);
                 }
-//                if (countOnes(solution & matrix[row]) % 2 == 1) {
-//                    cout << "WHAT?!?!?!?!? SHOULD BE 0" << endl;
-//                }
+                mpn_and_n(tmpBitArray.limb, solution.limb, matrix[row].limb, solution.limbCount);
+                assert(countOnes(tmpBitArray) % 2 == 0);
+
                 row--;
             }
             
@@ -814,14 +886,15 @@ public:
             //            printBits(solution, columns);
             
             for (auto row = 0; row < rows; row++) {
-                if (countOnes(solution & matrix[row]) % 2 != 0) {
-                    printBitVector(matrix, columns);
+                mpn_and_n(tmpBitArray.limb, solution.limb, matrix[row].limb, solution.limbCount);
+                if (countOnes(tmpBitArray) % 2 != 0) {
+                    //printBitVector(matrix, columns);
                     cout << "LEFT MOST " << leftMostOne(matrix[0]) << endl;
                     cout << "LEFT MOST " << leftMostOne(matrix[row]) << endl;
                     cout << "Rows " << rows << endl;
                     cout << "Row " << row << endl;
                     cout << "Last non zero row " << lastNonZeroRow << endl;
-                    cout << "ERROR A'LA CARTé" << endl;
+                    cout << "ERROR A'LA CARTÃ©" << endl;
                 }
             }
             
@@ -989,8 +1062,9 @@ public:
 ofstream primeFile;
 bool factorize(mpz_class n,int id) {
     vector<pair<mpz_class, long>> v;
+    cout<<"doing number "<<n<<endl;
     auto number = FactorNumber(n, v, n);
-    number = number.primalDivision().pollardish(200).quadraticSieve();
+    number = number.primalDivision(1000).quadraticSieve();
     vector<pair<mpz_class, long>> primeFactors;
     vector<pair<mpz_class, long>> factors(number.factors);
     if (number.quotient != 1) {
@@ -1024,6 +1098,8 @@ bool factorize(mpz_class n,int id) {
         primeFile << primeFactor.first << "^" << primeFactor.second << "*";
         cout << primeFactor.first << "^" << primeFactor.second << "*";
     }
+    assert(sum==n);
+    assert(isPrimes);
     primeFile << endl;
     cout << endl;
     
@@ -1032,9 +1108,9 @@ bool factorize(mpz_class n,int id) {
 
 
 
-static int c=0;
+
 int maxNumber=50;
-int parts = 8;
+int parts = 1;
 int readIndex=0;
 vector<pair<int,mpz_class>> numbers;
 
@@ -1045,9 +1121,8 @@ void threadStart(){
         auto number = numbers[readIndex];
         readIndex++;
         factorize(mpz_class(number.second),number.first);
-        
     }
-        
+    
 }
 
 
@@ -1056,34 +1131,28 @@ int main(int argc, const char * argv[]) {
     
     primeFile.open("allFile");
     
-//    numbers.push_back(pair<int, string>(72, "18996132722529700846131152050354296149651028364846574144251"));
-//    numbers.push_back(pair<int, string>(65, "49889279266115200775059218503419030500864403901007887784019"));
-//    numbers.push_back(pair<int, string>(83, "576334751456718155780563596342841412581309943878204372176377"));
-//    numbers.push_back(pair<int, string>(83, "576334751456718155780563596342841412581309943878204372176377"));
-//    numbers.push_back(pair<int, string>(68, "132075896758185134019024337813752764118268966348101728020913071"));
-//    numbers.push_back(pair<int, string>(54, "509400163949517821526234998932320292279137672740118034256802641"));
-//
-//    
-//    numbers.push_back(pair<int, string>(52, "5000549540354583606931795472064407457104519370771119422160047963"));
-//    numbers.push_back(pair<int, string>(68, "132075896758185134019024337813752764118268966348101728020913071"));
-//    numbers.push_back(pair<int, string>(52, "5000549540354583606931795472064407457104519370771119422160047963"));
-//    numbers.push_back(pair<int, string>(100, "134285690158745136430586046292187179785833393536668254068885393"));
-//
-//    numbers.push_back(pair<int, string>(42, "57894133910069793163066831085290042079302322624934847001690799761"));
+    mpz_class n("9108020935");
+    mpz_class big;
+    mpz_pow_ui(big.get_mpz_t(), ((mpz_class)10).get_mpz_t(), 40);
+    n*=big;
     
-    
-//    numbers.push_back(pair<int, string>(42, "57894133910069793163066831085290042079302322624934847001690799761"));
-//    numbers.push_back(pair<int, string>(42, "57894133910069793163066831085290042079302322624934847001690799761"));
-//    numbers.push_back(pair<int, string>(42, "57894133910069793163066831085290042079302322624934847001690799761"));
-//    numbers.push_back(pair<int, string>(42, "57894133910069793163066831085290042079302322624934847001690799761"));
+    for (int i=1;i<=10;i++)
+        numbers.push_back(pair<int, mpz_class>(i, n+i));
     
 
-    for (int i=75;i<=90;i++)
-        numbers.push_back(pair<int, mpz_class>(i, mpz_class("9011221992000000000000000000000000000000000000000000000000000000000000")+i));
-    for (int i=95;i<=100;i++)
-        numbers.push_back(pair<int, mpz_class>(i, mpz_class("9011221992000000000000000000000000000000000000000000000000000000000000")+i));
+//    auto paulCompleted ={82, 80, 64, 63, 58, 57, 56, 53, 51, 50, 49, 48, 47, 44, 43, 38, 35, 34, 37, 32, 30, 29, 28, 25, 24, 21, 22, 23, 20, 19, 17, 14, 13, 12, 10, 9, 6, 4, 2};
+//    for (int i=1;i<=100;i++)
+//        if (find(paulCompleted.begin(), paulCompleted.end(), i) != paulCompleted.end())
+//            numbers.push_back(pair<int, mpz_class>(i, n+i));
+//    
+//    n = "9011221992";
+//    n *= big;
+//    
+//    for (int i=1;i<=100;i++)
+//        numbers.push_back(pair<int, mpz_class>(i, n+i));
+
     
-    thread **threads = (thread**)malloc(sizeof(thread)*8);
+    thread **threads = (thread**)malloc(sizeof(thread)*parts);
     
     for (int c=0; c<parts; c++){
         threads[c] = new thread(threadStart);
@@ -1099,47 +1168,3 @@ int main(int argc, const char * argv[]) {
     return 0;
 }
 
-
-
-int main2(int argc, const char * argv[]) {
-    mpz_class n("28285080712529225758938006451268448739600961791355237");
-    mpz_class big;
-    
-    
-    long j ;
-    long start;
-    long end ;
-    
-    if (argc<2){
-        j=50;
-        start = 1;
-        end = 1;
-    }else{
-         j = atoi(argv[1]);
-         start = atoi(argv[2]);
-         end = atoi(argv[3]);
-    }
-    cout << "j, start, end " << j << ", " << start << ", " << end << endl;
-    
-    mpz_pow_ui(big.get_mpz_t(), ((mpz_class)10).get_mpz_t(), j);
-    string fileName = "primes" + to_string(j) + "-" + to_string(start) + "-" + to_string(end) + ".txt";
-    primeFile.open("out26");
-    //n *= big;
-    //n = 15346;//503*509;
-    //    n = 19;
-    int count = 0;
-    Logger logger = Logger();
-    for (auto s:numbers) {
-        mpz_class n(s.second);
-        cout<<endl;
-        cout<<s.first;
-        //if (factorize(n)) {
-        //    count++;
-        //}
-        cout<<s.first;
-    }
-    //}
-    logger.log("");
-    cout << "Factored " << count << endl;
-    return 0;
-}
