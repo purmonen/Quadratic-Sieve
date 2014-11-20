@@ -642,7 +642,7 @@ public:
         vector<long> oldi;
         vector<long> oldPrime;
         vector<float> oldPrimeLogs;
-        vector<float> oldYLogs;
+        //vector<float> oldYLogs;
         vector<long> oldRoot;
 
         
@@ -660,10 +660,11 @@ public:
         int maxIndex = index;
         
         int sieveCount = 0;
-        unsigned long lowLimit=0;
+        long lowLimit=0;
         int chunkSize = 1024*32*32;
-        unsigned long highLimit = chunkSize;
+        long highLimit = chunkSize;
         const auto maxPrimeLog = oldPrimeLogs[oldPrimeLogs.size()-1];
+        auto oldYLogs = new long[chunkSize];
         float nextIndex = 0;
         float lastLog = 0;
         while (sieveCount < primeBase.size() * 1.05) {
@@ -675,7 +676,9 @@ public:
                     lastLog = mpz_sizeinbase(value.get_mpz_t(), 2);
                     nextIndex = x*1.8 + 1;
                 }
-                oldYLogs.push_back(lastLog);
+                assert((x-lowLimit)>-1);
+                assert((x-lowLimit)<chunkSize);
+                oldYLogs[x-lowLimit] = lastLog;
             }
             
             for (int j = 0; j < maxIndex; j++){//for each prime
@@ -683,12 +686,15 @@ public:
                 const auto primeLog = oldPrimeLogs[j];
                 auto i = oldi[j];
                 for (; i<highLimit; i += prime){
+                    assert(i-lowLimit>-1);
+                    assert(i-lowLimit<chunkSize);
                     oldYLogs[i-lowLimit] -= primeLog;
                 }
                 oldi[j] = i;
             }
             for (auto i = lowLimit; i<highLimit; i++){
-                
+                assert(i-lowLimit>-1);
+                assert(i-lowLimit<chunkSize);
                 if (oldYLogs[i-lowLimit] < maxPrimeLog) {
                     mpz_class y = multiPolynomial(i);
 
@@ -713,12 +719,11 @@ public:
                 }
                 
             }
-            oldYLogs.clear();
             lowLimit = highLimit;
             highLimit += chunkSize;
             
         }
-        
+        delete [] oldYLogs;
         cout << "Sieve size " << sieveCount << endl;
         cout << "Prime base sise " << primeBase.size() << endl;
         
@@ -1014,7 +1019,7 @@ bool factorize(mpz_class n,int id) {
     vector<pair<mpz_class, long>> v;
 //    cout<<"doing number "<<n<<endl;
     auto number = FactorNumber(n, v, n);
-    number = number.primalDivision().pollardish(100).quadraticSieve();
+    number = number.primalDivision(1000).quadraticSieve();
     vector<pair<mpz_class, long>> primeFactors;
     vector<pair<mpz_class, long>> factors(number.factors);
     if (number.quotient != 1) {
@@ -1060,7 +1065,7 @@ bool factorize(mpz_class n,int id) {
 
 
 int maxNumber=50;
-int parts = 4;
+int parts = 1;
 int readIndex=0;
 vector<pair<int,mpz_class>> numbers;
 
@@ -1086,7 +1091,7 @@ int main(int argc, const char * argv[]) {
     
     mpz_class n("9108020935");
     mpz_class big;
-    mpz_pow_ui(big.get_mpz_t(), ((mpz_class)10).get_mpz_t(), 70);
+    mpz_pow_ui(big.get_mpz_t(), ((mpz_class)10).get_mpz_t(), 60);
     n*=big;
     
     for (int i=1;i<=10;i++)
