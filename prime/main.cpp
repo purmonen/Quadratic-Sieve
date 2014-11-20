@@ -680,10 +680,10 @@ public:
             
             for (int j = 0; j < maxIndex; j++){//for each prime
                 long prime = oldPrime[j];
-                
+                const auto primeLog = oldPrimeLogs[j];
                 auto i = oldi[j];
                 for (; i<highLimit; i += prime){
-                    oldYLogs[i-lowLimit] -= oldPrimeLogs[j];
+                    oldYLogs[i-lowLimit] -= primeLog;
                 }
                 oldi[j] = i;
             }
