@@ -363,7 +363,7 @@ mpz_class pollard(mpz_class n, long startValue, mpz_class limit) {
     int iterations = 0;
     while (d == 1) {
         iterations++;
-        if (iterations > 10000) {
+        if (iterations > 1e6) {
             iterations = 0;
             if (((chrono::system_clock::now() - startTime).count() / 1e6) > limit) {
                 cout << "Hit pollard limit " << startValue << endl;
@@ -444,7 +444,7 @@ public:
         this->quotient = quotient;
         this->quotientSqrt = msqrtceiling(quotient);
         double n = quotient.get_d();
-        B = 0.6 * exp(0.5*sqrt(log(n)*log(log(n)))) + 500;
+        B = 2 * exp(0.5*sqrt(log(n)*log(log(n)))) + 500;
         //        print();
         
         if (isPrime(quotient)) {
@@ -1019,7 +1019,7 @@ bool factorize(mpz_class n,int id) {
     vector<pair<mpz_class, long>> v;
 //    cout<<"doing number "<<n<<endl;
     auto number = FactorNumber(n, v, n);
-    number = number.primalDivision(1000).quadraticSieve();
+    number = number.primalDivision().pollardish(10).quadraticSieve();
     vector<pair<mpz_class, long>> primeFactors;
     vector<pair<mpz_class, long>> factors(number.factors);
     if (number.quotient != 1) {
@@ -1065,7 +1065,7 @@ bool factorize(mpz_class n,int id) {
 
 
 int maxNumber=50;
-int parts = 1;
+int parts = 4;
 int readIndex=0;
 vector<pair<int,mpz_class>> numbers;
 
@@ -1077,6 +1077,7 @@ void threadStart(){
         auto number = numbers[readIndex];
         readIndex++;
         l2.log("------STARTING FACTORIZING-----");
+        //cout<<"Working on "<<number<<endl;
         factorize(mpz_class(number.second),number.first);
         l2.log("-----DONE FACTORIZING-------");
     }
@@ -1091,17 +1092,17 @@ int main(int argc, const char * argv[]) {
     
     mpz_class n("9108020935");
     mpz_class big;
-    mpz_pow_ui(big.get_mpz_t(), ((mpz_class)10).get_mpz_t(), 60);
+    mpz_pow_ui(big.get_mpz_t(), ((mpz_class)10).get_mpz_t(), 70);
     n*=big;
     
-    for (int i=1;i<=10;i++)
+    for (int i=1;i<=1;i++)
         numbers.push_back(pair<int, mpz_class>(i, n+i));
     
 
-//    auto paulCompleted ={82, 80, 64, 63, 58, 57, 56, 53, 51, 50, 49, 48, 47, 44, 43, 38, 35, 34, 37, 32, 30, 29, 28, 25, 24, 21, 22, 23, 20, 19, 17, 14, 13, 12, 10, 9, 6, 4, 2};
-//    for (int i=1;i<=100;i++)
-//        if (find(paulCompleted.begin(), paulCompleted.end(), i) != paulCompleted.end())
-//            numbers.push_back(pair<int, mpz_class>(i, n+i));
+    auto paulCompleted ={1, 82, 80, 64, 63, 58, 57, 56, 53, 51, 50, 49, 48, 47, 44, 43, 38, 35, 34, 37, 32, 30, 29, 28, 25, 24, 21, 22, 23, 20, 19, 17, 14, 13, 12, 10, 9, 6, 4, 2, 75, 84, 55, 36, 79, 88, 11, 45, 91, 85, 27, 11, 87, 95, 94, 97};
+    for (int i=1;i<=100;i++)
+        if (find(paulCompleted.begin(), paulCompleted.end(), i) == paulCompleted.end())
+            numbers.push_back(pair<int, mpz_class>(i, n+i));
 //    
 //    n = "9011221992";
 //    n *= big;
