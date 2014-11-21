@@ -50,7 +50,7 @@ struct bitarray{
     
     ~bitarray(){
         //cout<<"destorying"<<endl;
-        delete limb;
+        delete[] limb;
     }
     
     
@@ -667,8 +667,11 @@ public:
         auto oldYLogs = new long[chunkSize];
         float nextIndex = 0;
         float lastLog = 0;
+        
+        mpz_class debugCount = 0;
         while (sieveCount < primeBase.size() * 1.05) {
-            //cout<<"New chunk "<<lowLimit<<" "<<sieveCount<<"/"<<primeBase.size()<<endl;
+            if (debugCount++%1000 == 0)
+                cout<<"New chunk "<<lowLimit<<" "<<sieveCount<<"/"<<primeBase.size()<<endl;
             for (auto x= lowLimit;x<highLimit;x++){
                 if (x >= nextIndex) {
                     mpz_class value = multiPolynomial(x);
@@ -1065,7 +1068,7 @@ bool factorize(mpz_class n,int id) {
 
 
 int maxNumber=50;
-int parts = 4;
+int parts = 1;
 int readIndex=0;
 vector<pair<int,mpz_class>> numbers;
 
