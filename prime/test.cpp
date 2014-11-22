@@ -31,143 +31,109 @@
 
 using namespace std;
 
-void setBit(mpz_class &x, long i) {
-    x |= (((mpz_class)1) << i);
-}
-
-long countOnes(mpz_class x) {
-    mpz_class count = 0;
-    while (x != 0) {
-        count += x & 1;
-        x >>= 1;
+template <class T>
+T gcd(T x, T y) {
+    if (x < y) {
+        swap(x, y);
     }
-    return count.get_si();
+    while (y != 0) {
+        auto tmp = y;
+        y = x % y;
+        x = tmp;
+    }
+    return x;
 }
-
-long leftMostOne(mpz_class x) {
-    mpz_class count = -1;
-    while (x != 0) {
-        count++;
-        x = x >> 1;
+static vector<long> generatePrimes2(long maxprime)
+{
+    unsigned long long* primes;
+    unsigned long long primecount=0;
+    
+    unsigned long long t = (maxprime>>6)+1ULL;
+    primes = new unsigned long long[t];
+    
+    primes[0] = 0x5555555555555556ULL;
+    for (long i = 1; i < ((maxprime>>6)+1ULL); i ++)
+    {
+        primes[i] = 0x5555555555555555ULL;
     }
     
-    return count.get_si();
-}
-
-
-#define GMP_LIMB_BITS_SHIFTER 6
-struct bitarray{
-    mp_limb_t* limb;
-    mp_size_t limbCount;
-    int id=rand();
+    bool f;
+    t = maxprime;
+    unsigned long long maxtest = (long long)sqrtl(t) + 1;
     
-    bitarray(long bitCount){
-        assert(bitCount!=0);
-        cout<<"creating with normal constructor"<<endl;
-        limbCount = (bitCount>>GMP_LIMB_BITS_SHIFTER)+1;
-        cout<<"ID"<<id<<"allocating "<<limbCount<<" for "<<bitCount<<"bits"<<endl;
-        limb = new mp_limb_t[limbCount];
-        memset(limb, 0, limbCount*GMP_LIMB_BITS>>3);
+    unsigned long long q;
+    for ( long long i = 3; i < maxtest; i += 2)
+    {
+        f=primes[(i-1)>>6] & (1ULL<<(((i-1)&63)));
+        if (f == true)
+        {
+            q = i + i;
+            for( long long p = i * i-1; p < maxprime-1;p += q)
+            {
+                unsigned long long dc =~ (1ULL<<((p&63)));
+                primes[p>>6] = primes[p>>6] & dc;
+            }
+        }
+    }
+    vector<long> result;
+    
+    for ( long long i = 2; i < maxprime; i ++)
+    {
+        f=primes[(i-1)>>6ULL] & (1ULL<<(((i-1)&63ULL)));
+        if (f)
+        {
+            result.push_back((long)i);
+            primecount++;
+        }
     }
     
-    bitarray(bitarray const &b){
-        cout<<"creating with copy constructor"<<endl;
-        limbCount = b.limbCount;
-        limb = new mp_limb_t[limbCount];
-        memcpy(limb, b.limb, limbCount*8);
+    return result;
+}
+
+static long modPow(long base,long power, long mod){
+    long result = base;
+    while (power>1) {
+        result *= base;
+        result %= mod;
     }
-    
-    ~bitarray(){
-        cout<<"Destroy "<<this<<" delete "<<limb<<endl;
-        delete[] limb;
-    }
-};
-
-void swap(bitarray &a, bitarray &b){
-    swap(a.limb,b.limb);
+    return result;
 }
-
-void setBit(bitarray &x, const long &i) {
-    const long limb = i >> GMP_LIMB_BITS_SHIFTER;
-    const long bitInLimb = i & 0b11111111ull;
-    x.limb[limb] |= 1ull << bitInLimb;
-}
-
-void unsetBit(bitarray &x, const long &i) {
-    const long limb = i >> GMP_LIMB_BITS_SHIFTER;
-    const long bitInLimb = i & 0b11111111ull;
-    x.limb[limb] &= ~(1ull << bitInLimb);
-}
-
-void flipBit(bitarray &x, const long &i) {
-    const long limb = i >> GMP_LIMB_BITS_SHIFTER;
-    const long bitInLimb = i & 0b11111111ull;
-    x.limb[limb] ^= 1ull << bitInLimb;
-}
-
-inline const bool isBitSet(const bitarray &x, const long &i) {
-    const long limb = i >> GMP_LIMB_BITS_SHIFTER;
-    const long bitInLimb = i & 0b11111111ull;
-    return (x.limb[limb]>>bitInLimb) & 1;
-}
-
-long countOnes(bitarray &x) {
-    return mpn_popcount(x.limb,x.limbCount);
-}
-long leftMostOne(bitarray &bitset) {
-    
-    auto i = bitset.limbCount-1;
-    for (; i>=0; i--) {
-        if (bitset.limb[i] != 0) break;
-    }
-    cout<<"found in limb "<<i<<endl;
-    auto x = bitset.limb[i];
-    long count = -1;
-    while (x != 0) {
-        count++;
-        x = x >> 1;
-    }
-    
-    return (i<<GMP_LIMB_BITS_SHIFTER) + count;
-}
-
-
-
 
 
 int main(int argc, const char * argv[]) {
-    bitarray arr1(100);
-    for (int i=0;i<100;i++)
-        setBit(arr1, i);
     
-    bitarray arr2(100);
-    for (int i=0;i<100;i+=2)
-        setBit(arr2, i);
-
-    swap(arr1,arr2);
+    long max = 1e6;
     
+    auto primes = generatePrimes2(max);
+    
+    
+    for (long n = 3; n < max; n++){
+        bool isCarmichael = true;
+        for (auto p:primes){
+            if (p > n) break;
+            if (((n-1)%(p-1) != 0 && n%p == 0)|| p==n ){
+                isCarmichael = false;
+                break;
+            }
+        }
+        if (isCarmichael){
+            long value = n;
+            for (auto p:primes)
+                if (value%p==0 && value/p%p ==0) {isCarmichael = false; break;};
+            if (isCarmichael) cout<<n<<" ";
+        }
+    }
     cout<<endl;
-    for (int i=0;i<128;i++)
-        cout<<isBitSet(arr1, i);
-    cout<<endl;
-    for (int i=0;i<128;i++)
-        cout<<isBitSet(arr2, i);
-    cout<<endl;
-    
-//    mpz_class arr2;
-//    srand(5);
-//    int bit =rand()%10;
-//    setBit(arr, bit);
-//    setBit(arr2,bit);
-//    bit =rand()%10;
-//    setBit(arr, bit);
-//    setBit(arr2,bit);
-//
-//    cout<<leftMostOne(arr)<<endl;
-//    cout<<leftMostOne(arr2)<<endl;
-    
     return 1;
 }
+
+
+
+
+
+
+
+
 
 
 
