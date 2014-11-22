@@ -322,7 +322,7 @@ vector<long> generatePrimes(long limit) {
     return primes;
 }
 
-auto primes = generatePrimes(1e10);
+auto primes = generatePrimes(1e7);
 
 mpz_class pollard2(mpz_class n, long startValue, mpz_class limit, vector<pair<mpz_class, long>> &factors) {
     mpz_class x = startValue, y = startValue, d = 1;
@@ -562,6 +562,97 @@ public:
         return (quotientSqrt + x)*(quotientSqrt + x) - quotient;
     }
     
+    
+    void sieve(
+               //Immutable parameters
+               const long lowLimit,
+               const long highLimit,
+               const vector<float> &oldPrimeLogs,
+               const vector<pair<long, vector<long>>> &primeBase,
+               const vector<long> &oldPrime,
+               const vector<long> &oldRoot,
+               const long maxIndex,
+               const long bitWidth,
+               
+               //Mutable parameters
+               long oldYLogs[],
+               vector<mpz_class> &oldY,
+               vector<mpz_class> &oldX,
+               long &sieveCount,
+               vector<bitarray> &bitsets,
+               std::atomic_flag &lock,
+               vector<long> &oldi){
+        
+       
+        
+        
+        
+
+        
+        const auto maxPrimeLog = oldPrimeLogs[oldPrimeLogs.size()-1];
+        auto nextIndex = lowLimit;
+        long lastLog = 0;
+        for (auto x= lowLimit;x<highLimit;x++){
+            if (x >= nextIndex) {
+                mpz_class value = multiPolynomial(x);
+                lastLog = mpz_sizeinbase(value.get_mpz_t(), 2);
+                nextIndex = x*1.8 + 1;
+            }
+            oldYLogs[x-lowLimit] = lastLog;
+        }
+        
+        for (int j = 0; j < maxIndex; j++){//for each prime
+            const long prime = oldPrime[j];
+            const long root = oldRoot[j];
+            const auto primeLog = oldPrimeLogs[j];
+            //cout<<j<<" "<<endl;
+            auto i = lowLimit - lowLimit%prime + root;
+            if (i<lowLimit) i+=prime;
+            
+            //auto i = oldi[j];
+            //assert(i2==i);
+            //cout<<i<<" "<<i2<<endl;
+            for (; i<highLimit; i += prime){
+                oldYLogs[i-lowLimit] -= primeLog;
+            }
+            //oldi[j] = i;
+        }
+        for (auto i = lowLimit; i<highLimit; i++){
+            if (oldYLogs[i-lowLimit] < maxPrimeLog) {
+                mpz_class y = multiPolynomial(i);
+                
+                vector<long> v;
+                for(auto p = 0; p < primeBase.size(); p++) {
+                    while(mpz_divisible_ui_p(y.get_mpz_t(), primeBase[p].first)) {
+                        mpz_divexact_ui(y.get_mpz_t(), y.get_mpz_t(), primeBase[p].first);
+                        //                            bitset ^= (((mpz_class)1) << p);
+                        v.push_back(p);
+                    }
+                }
+                if (y == 1) {
+                    //Lock this
+                    while (lock.test_and_set(std::memory_order_acquire));  // acquire lock
+
+                    if (sieveCount >= bitWidth) {
+                        lock.clear(std::memory_order_release);
+                        break;
+                    }
+                    
+                    for (auto p: v) {
+                        flipBit(bitsets[p], sieveCount);
+                    }
+                    oldX.push_back(i);
+                    oldY.push_back((quotientSqrt + i)*(quotientSqrt + i) - quotient);
+                    sieveCount++;
+                    lock.clear(std::memory_order_release);               // release lock
+
+                    //end lock
+                }
+            }
+            
+        }
+    }
+    
     FactorNumber quadraticSieve() {
 
 
@@ -646,7 +737,7 @@ public:
         vector<long> oldRoot;
 
         
-        int index=0;
+        long index=0;
         for (long long p = 0; p < primeBase.size(); p++) {
             auto primePair = primeBase[p];
             for (long root: primePair.second) {
@@ -657,76 +748,44 @@ public:
                 index++;
             }
         }
-        int maxIndex = index;
+        long maxIndex = index;
         
-        int sieveCount = 0;
+        long sieveCount = 0;
         long lowLimit=0;
-        int chunkSize = 1024*32*32;
+        int chunkSize = 1024*32*64;
         long highLimit = chunkSize;
-        const auto maxPrimeLog = oldPrimeLogs[oldPrimeLogs.size()-1];
-        auto oldYLogs = new long[chunkSize];
-        float nextIndex = 0;
-        float lastLog = 0;
+        //const auto maxPrimeLog = oldPrimeLogs[oldPrimeLogs.size()-1];
+        //float nextIndex = 0;
+        //float lastLog = 0;
+        std::atomic_flag lock = ATOMIC_FLAG_INIT;
         
+        int threadCount = 8;
+        thread * threads = new thread[threadCount];
         mpz_class debugCount = 0;
-        while (sieveCount < bitWidth) {
-            if (debugCount++%10000 == 0)
-                cout<<"New chunk "<<lowLimit<<" "<<sieveCount<<"/"<<primeBase.size()<<endl;
-            for (auto x= lowLimit;x<highLimit;x++){
-                if (x >= nextIndex) {
-                    mpz_class value = multiPolynomial(x);
-                    //                    mpz_class value = (quotientSqrt + 2*x)*(quotientSqrt + 2*x) - quotient;
-                    lastLog = mpz_sizeinbase(value.get_mpz_t(), 2);
-                    nextIndex = x*1.8 + 1;
-                }
-                //assert((x-lowLimit)>-1);
-                //assert((x-lowLimit)<chunkSize);
-                oldYLogs[x-lowLimit] = lastLog;
-            }
-            
-            for (int j = 0; j < maxIndex; j++){//for each prime
-                const long prime = oldPrime[j];
-                const auto primeLog = oldPrimeLogs[j];
-                auto i = oldi[j];
-                for (; i<highLimit; i += prime){
-                    //assert(i-lowLimit>-1);
-                    //assert(i-lowLimit<chunkSize);
-                    oldYLogs[i-lowLimit] -= primeLog;
-                }
-                oldi[j] = i;
-            }
-            for (auto i = lowLimit; i<highLimit; i++){
-                //assert(i-lowLimit>-1);
-                //assert(i-lowLimit<chunkSize);
-                if (oldYLogs[i-lowLimit] < maxPrimeLog) {
-                    mpz_class y = multiPolynomial(i);
 
-                    vector<long> v;
-                    for(auto p = 0; p < primeBase.size(); p++) {
-                        while(mpz_divisible_ui_p(y.get_mpz_t(), primeBase[p].first)) {
-                            mpz_divexact_ui(y.get_mpz_t(), y.get_mpz_t(), primeBase[p].first);
-                            //                            bitset ^= (((mpz_class)1) << p);
-                            v.push_back(p);
-                        }
-                    }
-                    if (y == 1) {
-                        if (sieveCount>=bitWidth) break;
-
-                        for (auto p: v) {
-                            flipBit(bitsets[p], sieveCount);
-                        }
-                        oldX.push_back(i);
-                        oldY.push_back((quotientSqrt + i)*(quotientSqrt + i) - quotient);
-                        sieveCount++;
-                    }
+        
+        for (int i=0;i<threadCount;i++){
+            threads[i] = thread(
+            [&](long oldYLogs[]){
+                while (lock.test_and_set(std::memory_order_acquire));  // acquire lock
+                while (sieveCount < bitWidth) {
+                    if (debugCount++%100 == 0)
+                        cout<<"New chunk "<<lowLimit<<" "<<sieveCount<<"/"<<primeBase.size()<<endl;
+                    lock.clear(std::memory_order_release);               // release lock
+                    sieve(lowLimit, highLimit, oldPrimeLogs, primeBase, oldPrime, oldRoot, maxIndex, bitWidth, oldYLogs, oldY, oldX, sieveCount, bitsets, lock, oldi);
+                    while (lock.test_and_set(std::memory_order_acquire));  // acquire lock
+                    lowLimit = highLimit;
+                    highLimit += chunkSize;
+                    
                 }
-                
-            }
-            lowLimit = highLimit;
-            highLimit += chunkSize;
-            
+                //delete [] oldYLogs;
+                lock.clear(std::memory_order_release);               // release lock
+                delete[] oldYLogs;
+            },new long[highLimit-lowLimit]);
         }
-        delete [] oldYLogs;
+        for (int i = 0; i < threadCount; i++){
+            threads[i].join();
+        }
         cout << "Sieve size " << sieveCount << endl;
         cout << "Prime base sise " << primeBase.size() << endl;
         
@@ -734,53 +793,6 @@ public:
         auto columns = oldY.size();
         
         cout << "Matrix" << endl;
-        
-//        mpz_class orred = 0;
-//        for (auto bitset: bitsets) {
-//            orred |= bitset;
-//        }
-//        cout << "BEFRE SHIFTING" << endl;
-//        printBitVector(bitsets, rows);
-//        
-//        for (long p = rows-1; p >= 0; p--) {
-//            if (!isBitSet(orred, p)) {
-//                mpz_class rightMask = 0;
-//                for (int i = 0; i < p-1; i++) {
-//                    rightMask <<= 1;
-//                    rightMask += 1;
-//                }
-//                mpz_class leftMask = ~rightMask;
-//                unsetBit(leftMask, p);
-//                for (auto bitset: bitsets) {
-//                    //                    cout << "------ " << p << endl;
-//                    //                    printBits(bitset, rows);
-//                    bitset = (bitset & rightMask) | ((bitset & leftMask) >> 1);
-//                    //                    printBits(bitset, rows);
-//                    //                    printBits(bitset, rows-1);
-//                    //                    printBits(1 << p, rows);
-//                }
-//                rows--;
-//                
-//            }
-//            
-//        }
-//        
-//        //        p1 p2 p3 p4 = 1010
-//        //        p1 p2 p3 p4 = 1011
-//        cout << "AFTER SHIFTING" << endl;
-//        printBitVector(bitsets, rows);
-//        
-//        logger.log("Transposing matrix " + to_string(rows) + "x" + to_string(columns));
-//        vector<mpz_class> matrix(rows, mpz_class(0));
-//        for (auto row = 0; row < rows; row++) {
-//            for (auto column = 0; column < columns; column++) {
-//                if (isBitSet(bitsets[column], row)) {
-//                    setBit(matrix[row], column);
-//                }
-//            }
-//        }
-        
-        
         
         //        cout << "Bit sets" << endl;
         //        printBitVector(bitsets, rows);
@@ -1024,7 +1036,7 @@ bool factorize(mpz_class n,int id) {
     vector<pair<mpz_class, long>> v;
 //    cout<<"doing number "<<n<<endl;
     auto number = FactorNumber(n, v, n);
-    number = number.primalDivision().pollardish(10).quadraticSieve();
+    number = number.primalDivision(1000).quadraticSieve();
     vector<pair<mpz_class, long>> primeFactors;
     vector<pair<mpz_class, long>> factors(number.factors);
     if (number.quotient != 1) {
@@ -1070,7 +1082,7 @@ bool factorize(mpz_class n,int id) {
 
 
 int maxNumber=50;
-int parts = 32;
+int parts = 1;
 int readIndex=0;
 vector<pair<int,mpz_class>> numbers;
 
@@ -1097,7 +1109,7 @@ int main(int argc, const char * argv[]) {
     
     mpz_class n("9108020935");
     mpz_class big;
-    mpz_pow_ui(big.get_mpz_t(), ((mpz_class)10).get_mpz_t(), 70);
+    mpz_pow_ui(big.get_mpz_t(), ((mpz_class)10).get_mpz_t(), 45);
     n*=big;
     
     //for (int i=1;i<=1;i++)
@@ -1109,7 +1121,7 @@ int main(int argc, const char * argv[]) {
     //    if (find(paulCompleted.begin(), paulCompleted.end(), i) == paulCompleted.end())
     //        numbers.push_back(pair<int, mpz_class>(i, n+i));
     
-    auto todo = {5,7,15,16,26,31,33,40,41,52,54,59,60,61,62,65,66,68,70,72,73,77,78,81,83,86,89,90,92,96,100};
+    auto todo = {5};//,7,15,16,26,31,33,40,41,52,54,59,60,61,62,65,66,68,70,72,73,77,78,81,83,86,89,90,92,96,100};
     for (int i=1;i<=100;i++)
         if (find(todo.begin(), todo.end(), i) != todo.end())
             numbers.push_back(pair<int, mpz_class>(i, n+i));

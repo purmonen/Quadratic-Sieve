@@ -9,7 +9,7 @@
 /* Begin PBXBuildFile section */
 		26912E2D1A17927D00F70C84 /* libgmpxx.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 26912E2C1A17927D00F70C84 /* libgmpxx.a */; };
 		26912E2F1A1792B400F70C84 /* libgmp.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 26912E2E1A1792B400F70C84 /* libgmp.a */; };
-		DAC3964C1A20DB8C0054FC6D /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 265E976F1A0F32CD002C236B /* main.cpp */; };
+		DAC396A21A211F2E0054FC6D /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 265E976F1A0F32CD002C236B /* main.cpp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -130,7 +130,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				DAC3964C1A20DB8C0054FC6D /* main.cpp in Sources */,
+				DAC396A21A211F2E0054FC6D /* main.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
