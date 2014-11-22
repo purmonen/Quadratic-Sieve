@@ -30,6 +30,9 @@ struct bitarray{
     long bitSize;
     mp_size_t limbCount;
     
+    bitarray():bitarray(0) {
+    }
+    
     bitarray(long bitCount){
         bitSize = bitCount;
         //assert(bitCount!=0);
@@ -576,19 +579,12 @@ public:
                
                //Mutable parameters
                long oldYLogs[],
-               vector<mpz_class> &oldY,
-               vector<mpz_class> &oldX,
+               mpz_class oldY[],
+               mpz_class oldX[],
                long &sieveCount,
-               vector<bitarray> &bitsets,
+               bitarray bitsets[],
                std::atomic_flag &lock,
                vector<long> &oldi){
-        
-       
-        
-        
-        
-
-        
         const auto maxPrimeLog = oldPrimeLogs[oldPrimeLogs.size()-1];
         auto nextIndex = lowLimit;
         long lastLog = 0;
@@ -637,15 +633,14 @@ public:
                         lock.clear(std::memory_order_release);
                         break;
                     }
-                    
                     for (auto p: v) {
                         flipBit(bitsets[p], sieveCount);
                     }
-                    oldX.push_back(i);
-                    oldY.push_back((quotientSqrt + i)*(quotientSqrt + i) - quotient);
+                    oldX[sieveCount] = i;
+                    oldY[sieveCount] = multiPolynomial(i);
+                    oldY[sieveCount] = (quotientSqrt + i)*(quotientSqrt + i) - quotient;
                     sieveCount++;
                     lock.clear(std::memory_order_release);               // release lock
-
                     //end lock
                 }
             }
@@ -722,12 +717,15 @@ public:
         
         logger.log("Sieving");
         // Sieving
-        vector<mpz_class> oldY;
-        vector<mpz_class> oldX;
         
         long bitWidth = primeBase.size()*1.05+100;
-
-        vector<bitarray> bitsets(primeBase.size(),bitWidth);
+        auto oldY = new mpz_class[bitWidth];
+        auto oldX = new mpz_class[bitWidth];
+        auto bitsets = new bitarray[primeBase.size()];
+        for (long i = 0; i < primeBase.size(); i++) {
+            new (&bitsets[i]) bitarray(bitWidth);
+        }
+        
         bitarray tmpBitArray(bitWidth);
         
         vector<long> oldi;
@@ -759,7 +757,7 @@ public:
         //float lastLog = 0;
         std::atomic_flag lock = ATOMIC_FLAG_INIT;
         
-        int threadCount = 8;
+        int threadCount = 1;
         thread * threads = new thread[threadCount];
         mpz_class debugCount = 0;
 
@@ -769,14 +767,13 @@ public:
             [&](long oldYLogs[]){
                 while (lock.test_and_set(std::memory_order_acquire));  // acquire lock
                 while (sieveCount < bitWidth) {
-                    if (debugCount++%100 == 0)
+                    if (debugCount++%10 == 0)
                         cout<<"New chunk "<<lowLimit<<" "<<sieveCount<<"/"<<primeBase.size()<<endl;
                     lock.clear(std::memory_order_release);               // release lock
                     sieve(lowLimit, highLimit, oldPrimeLogs, primeBase, oldPrime, oldRoot, maxIndex, bitWidth, oldYLogs, oldY, oldX, sieveCount, bitsets, lock, oldi);
                     while (lock.test_and_set(std::memory_order_acquire));  // acquire lock
                     lowLimit = highLimit;
                     highLimit += chunkSize;
-                    
                 }
                 //delete [] oldYLogs;
                 lock.clear(std::memory_order_release);               // release lock
@@ -790,7 +787,7 @@ public:
         cout << "Prime base sise " << primeBase.size() << endl;
         
         auto rows = primeBase.size();
-        auto columns = oldY.size();
+        auto columns = bitWidth;
         
         cout << "Matrix" << endl;
         

@@ -10,7 +10,7 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "prime/main.cpp"
-            timestampString = "438052754.300993"
+            timestampString = "438392639.596435"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "759"
@@ -26,7 +26,7 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "prime/main.cpp"
-            timestampString = "438052754.300993"
+            timestampString = "438392639.596435"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "734"
@@ -42,12 +42,12 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "prime/main.cpp"
-            timestampString = "438052754.300993"
+            timestampString = "438391524.868958"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "59"
-            endingLineNumber = "59"
-            landmarkName = "printVector(std::vector&lt;T&gt; vector)"
+            startingLineNumber = "62"
+            endingLineNumber = "62"
+            landmarkName = "swap(bitarray &amp;a, bitarray &amp;b)"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -58,12 +58,12 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "prime/main.cpp"
-            timestampString = "438052754.300993"
+            timestampString = "438391524.868958"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "67"
-            endingLineNumber = "67"
-            landmarkName = "printBitVector(std::vector&lt;mpz_class&gt; vector, size_t length)"
+            startingLineNumber = "70"
+            endingLineNumber = "70"
+            landmarkName = "setBit(bitarray &amp;x, const long &amp;i)"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -186,11 +186,11 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "prime/main.cpp"
-            timestampString = "438052754.300993"
+            timestampString = "438391524.868958"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "703"
-            endingLineNumber = "703"
+            startingLineNumber = "698"
+            endingLineNumber = "698"
             landmarkName = "quadraticSieve()"
             landmarkType = "5">
          </BreakpointContent>
@@ -202,12 +202,12 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "prime/main.cpp"
-            timestampString = "438052754.300993"
+            timestampString = "438391524.868958"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "639"
-            endingLineNumber = "639"
-            landmarkName = "quadraticSieve()"
+            startingLineNumber = "635"
+            endingLineNumber = "635"
+            landmarkName = "sieve( //Immutable parameters const long lowLimit, const long highLimit, const vector&lt;float&gt; &amp;oldPrimeLogs, const vector&lt;pair&lt;long, vector&lt;long&gt;&gt;&gt; &amp;primeBase, const vector&lt;long&gt; &amp;oldPrime, const vector&lt;long&gt; &amp;oldRoot, const long maxIndex, const long bitWidth, //Mutable parameters long oldYLogs[], mpz_class oldY[], mpz_class oldX[], long &amp;sieveCount, bitarray bitsets[], std::atomic_flag &amp;lock, vector&lt;long&gt; &amp;oldi)"
             landmarkType = "5">
          </BreakpointContent>
       </BreakpointProxy>
