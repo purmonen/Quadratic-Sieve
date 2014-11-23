@@ -721,7 +721,7 @@ public:
         long bitWidth = primeBase.size()*1.05+100;
         auto oldY = new mpz_class[bitWidth];
         auto oldX = new mpz_class[bitWidth];
-        auto bitsets = new bitarray[primeBase.size()];
+        auto bitsets = (bitarray*)malloc(sizeof(bitarray)*primeBase.size());
         for (long i = 0; i < primeBase.size(); i++) {
             new (&bitsets[i]) bitarray(bitWidth);
         }
@@ -757,7 +757,7 @@ public:
         //float lastLog = 0;
         std::atomic_flag lock = ATOMIC_FLAG_INIT;
         
-        int threadCount = 1;
+        int threadCount = 4;
         thread * threads = new thread[threadCount];
         mpz_class debugCount = 0;
 
@@ -875,6 +875,7 @@ public:
                     X *= (oldX[i] + quotientSqrt);
                 }
             }
+            
             if (msqrtceiling(Y) != msqrtfloor(Y)) {
                 cout << "ERROR ultra bug in roots" << endl;
             }
@@ -930,11 +931,23 @@ public:
             
             if (factors.size() > this->factors.size()) {
                 logger.log("Solution found");
+                for (int i = 0; i < primeBase.size(); i++) {
+                    bitsets[i].~bitarray();
+                }
+                free(bitsets);
+                delete[] oldX;
+                delete[] oldY;
                 return FactorNumber(number, factors, x);
             } else {
                 logger.log("No solution found " + to_string(iterations));
             }
         }
+        for (int i = 0; i < primeBase.size(); i++) {
+            bitsets[i].~bitarray();
+        }
+        free(bitsets);
+        delete[] oldX;
+        delete[] oldY;
         return FactorNumber(number, factors, quotient);
     }
     
